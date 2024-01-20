@@ -1,4 +1,4 @@
-.PHONY: clean clean_mf_mysql fetch_mf_mysql data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: clean clean_mf_mysql mf_mysql werk_data clean_werk_data lint requirements sync_data_to_s3 sync_data_from_s3
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -9,6 +9,8 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 PROFILE = default
 PROJECT_NAME = manufuture_part_price_prediction
 PYTHON_INTERPRETER = python3
+RAW_WERK_DATA = data/raw/werk_data
+PROCESSED_WERK_DATA = data/processed/werk_data
 
 ifeq (,$(shell which conda))
 HAS_CONDA=False
@@ -26,12 +28,13 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 ## Fetch Manufuture Data from MySQL
-fetch_mf_mysql: requirements
+mf_mysql: requirements
 	$(PYTHON_INTERPRETER) src/data/fetch_manufuture_mysql.py data/raw
 
-## Make Dataset
-data: requirements
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw data/processed
+## Make Werk Dataset
+werk_data: requirements
+	$(PYTHON_INTERPRETER) src/data/make_werk_data.py $(RAW_WERK_DATA) $(PROCESSED_WERK_DATA)
+
 
 ## Delete all compiled Python files
 clean:
@@ -41,6 +44,10 @@ clean:
 ## Delete all parquet files holding Manufuture MySQL tables
 clean_mf_mysql:
 	rm -rf data/raw/*.parquet
+
+## Delete all parquet files holding Werk data
+clean_werk_data:
+	rm -rf $(PROCESSED_WERK_DATA)/*.parquet
 
 ## Lint using flake8
 lint:

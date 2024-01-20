@@ -14,3 +14,4 @@ pandas==2.1.4
 pymysql==1.1.0
 pyarrow==14.0.2
 fastparquet==2023.10.1
+werk24==1.7.0
