@@ -54,6 +54,8 @@ def main(output_filepath):
             continue
         table_df = clean_table_and_save(table_name, table_df)
         print("Writing table " + table_name + " to " + output_filepath + "/" + table_name + ".parquet")
+        # validate that output_filepath exists, and if not, create it
+        Path(output_filepath).mkdir(parents=True, exist_ok=True)
         table_df.to_parquet(output_filepath + "/" + table_name + ".parquet")
 
 
