@@ -5,7 +5,7 @@ from dotenv import find_dotenv, load_dotenv
 from sqlalchemy import create_engine
 import pandas as pd
 
-from docs.conf import DB_CONNECTION_STRING, SKIPPED_RAW_MANUFUTURE_TABLES
+from src.data.config import DB_CONNECTION_STRING, SKIPPED_RAW_MANUFUTURE_TABLES
 
 
 def get_db_connection():
@@ -44,15 +44,16 @@ def clean_table_and_save(table_name, table_df):
 @click.command()
 @click.argument('output_filepath', type=click.Path())
 def main(output_filepath):
-    """ Reads Manufuture MySQL database as input and saves it to ../raw
+    """ Read Manufuture MySQL database and saves it to data/raw as parquet files
     """
     logger = logging.getLogger(__name__)
     logger.info('fetching raw data from Manufuture MySQL database')
-    all_tables_df = fetch_all_tables_df()
-    for table_name, table_df in all_tables_df.items():
+    for table_name, table_df in fetch_all_tables_df().items():
         if table_name in SKIPPED_RAW_MANUFUTURE_TABLES:
             continue
-        table_df = clean_table_and_save(table_name, table_df)
+        if table_name == 'wp_posts':
+            table_df['post_date_gmt'] = table_df['post_date_gmt'].replace('0000-00-00 00:00:00', None)
+            table_df['post_modified_gmt'] = table_df['post_modified_gmt'].replace('0000-00-00 00:00:00', None)
         print("Writing table " + table_name + " to " + output_filepath + "/" + table_name + ".parquet")
         # validate that output_filepath exists, and if not, create it
         Path(output_filepath).mkdir(parents=True, exist_ok=True)

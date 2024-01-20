@@ -11,9 +11,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import os
-import sys
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -243,7 +240,3 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
 
-# -- MySQL access  -------------------------------------------------------------
-
-DB_CONNECTION_STRING = "mysql+pymysql://root:mysql123@localhost/manufuture"
-SKIPPED_RAW_MANUFUTURE_TABLES = ['wp_actionscheduler_actions', 'wp_wc_order_stats']

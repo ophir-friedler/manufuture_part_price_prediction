@@ -33,26 +33,24 @@ def main(input_filepath, output_filepath):
 
 
 def werk_by_result_name(werk_filepath) -> pd.DataFrame:
-    logging.info("Building werk_enrich: name, num_pages, material_categorization_level_1, material_categorization_level_2, material_categorization_level_3")
+    logging.info("Building werk_enrich: name, num_pages, material_categorization_level_1,2,3")
     # read werk table from parquet file which is located in ../processed/werk_data
     werk_df = pd.read_parquet(werk_filepath + "/werk.parquet")
     werk_df = werk_df
     werk_by_name_df = werk_df.groupby('name').agg(
-        number_of_pages=('Page', 'nunique')
-        , material_categorization_level_1_set=(
-            'material_categorization_level_1', lambda x: transform_to_comma_separated_str_set(x))
-        , material_categorization_level_2_set=(
-            'material_categorization_level_2', lambda x: transform_to_comma_separated_str_set(x))
-        , material_categorization_level_3_set=(
-            'material_categorization_level_3', lambda x: transform_to_comma_separated_str_set(x))
-        # number of values in 'nominal_size' that are not null or Nan or None
-        , number_of_nominal_sizes=('nominal_size', lambda x: len([y for y in list(x) if y is not None]))
-        , average_tolerance=('tolerance', lambda x: sum([y for y in list(x) if y is not None]) / len(
-            [y for y in list(x) if y is not None]))
-        , tolerance_01=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.1 <= y]))
-        , tolerance_001=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.01 <= y < 0.1]))
-        , tolerance_0001=('tolerance', lambda x: len([y for y in list(x) if y is not None and y < 0.01]))
-        , enclosing_cuboid_volumes_set=('enclosing_cuboid_volume', lambda x: transform_to_comma_separated_str_set(x))
+        number_of_pages=('Page', 'nunique'), material_categorization_level_1_set=(
+            'material_categorization_level_1', lambda x: transform_to_comma_separated_str_set(x)),
+        material_categorization_level_2_set=(
+            'material_categorization_level_2', lambda x: transform_to_comma_separated_str_set(x)),
+        material_categorization_level_3_set=(
+            'material_categorization_level_3', lambda x: transform_to_comma_separated_str_set(x)),
+        number_of_nominal_sizes=('nominal_size', lambda x: len([y for y in list(x) if y is not None])),
+        average_tolerance=('tolerance', lambda x: sum([y for y in list(x) if y is not None]) / len(
+            [y for y in list(x) if y is not None])),
+        tolerance_01=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.1 <= y])),
+        tolerance_001=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.01 <= y < 0.1])),
+        tolerance_0001=('tolerance', lambda x: len([y for y in list(x) if y is not None and y < 0.01])),
+        enclosing_cuboid_volumes_set=('enclosing_cuboid_volume', lambda x: transform_to_comma_separated_str_set(x))
     )
     werk_by_name_df = werk_by_name_df.reset_index()
     return werk_by_name_df
@@ -62,6 +60,7 @@ def write_df_to_parquet(df, name, output_filepath):
     logging.info("Writing dataframe " + name + " to " + output_filepath + "/" + name + ".parquet")
     Path(output_filepath).mkdir(parents=True, exist_ok=True)
     df.to_parquet(output_filepath + "/" + name + ".parquet")
+
 
 def write_werk_to_parquet(input_filepath, output_filepath):
     ret_val = process_all_werk_results_dirs_to_df(input_filepath)
@@ -89,9 +88,9 @@ def get_all_werk_results_dirs(starting_dir):
     # get list of all directories with suffix "Results" in starting_dir recursively
     results_dirs = []
     for root, dirs, files in os.walk(starting_dir):
-        for dir in dirs:
-            if dir.endswith("Results"):
-                results_dirs.append(os.path.join(root, dir))
+        for dir_ in dirs:
+            if dir_.endswith("Results"):
+                results_dirs.append(os.path.join(root, dir_))
 
     return results_dirs
 
@@ -139,8 +138,6 @@ def extract_features_form_werk_results_dir(results_dir):
                                 and dict_werk_column_name_to_value['size_tolerance_deviation_upper'] is not None:
                             dict_werk_column_name_to_value['tolerance'] = dict_werk_column_name_to_value['size_tolerance_deviation_upper'] - dict_werk_column_name_to_value['size_tolerance_deviation_lower']
                         list_of_dict_werk_column_name_to_value.append(dict_werk_column_name_to_value)
-
-
     return list_of_dict_werk_column_name_to_value
 
 
@@ -163,9 +160,9 @@ def build_canvas_external_dimensions_column_name_to_value(canvas_dir, data_dict,
 
 
 def build_title_block_column_to_value_dict(data_dict, page_dir, part_name, results_dir):
-    page_title_block_column_name_to_value = {'name': part_name
-        , 'result_dir_full_path': results_dir
-        , 'Page': page_dir}
+    page_title_block_column_name_to_value = {'name': part_name,
+                                             'result_dir_full_path': results_dir,
+                                             'Page': page_dir}
     title_block = data_dict['title_block']
     if title_block is None or title_block.material is None or title_block.material.material_category is None:
         page_title_block_column_name_to_value['material_categorization_level_1'] = None
