@@ -12,15 +12,58 @@ import os
 from werk24 import W24Measure
 from werk24.models.title_block import W24TitleBlock
 
+from src.features.build_features import transform_to_comma_separated_str_set
+
 
 @click.command()
 @click.argument('input_filepath', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
 def main(input_filepath, output_filepath):
     """ Processes werk raw data into a dataframe (saved in ../processed/werk_data as parquet).
+    Then process into werk_by_name dataframe (saved in ../processed/werk_by_name as parquet).
     """
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
+    write_werk_to_parquet(input_filepath, output_filepath)
+    # if output_filepath/werk.parquet does not exist, then create it
+    if not os.path.exists(output_filepath + "/werk.parquet"):
+        write_df_to_parquet(process_all_werk_results_dirs_to_df(input_filepath), 'werk', output_filepath)
+    if not os.path.exists(output_filepath + "/werk_by_name.parquet"):
+        write_df_to_parquet(werk_by_result_name(output_filepath), 'werk_by_name', output_filepath)
+
+
+def werk_by_result_name(werk_filepath) -> pd.DataFrame:
+    logging.info("Building werk_enrich: name, num_pages, material_categorization_level_1, material_categorization_level_2, material_categorization_level_3")
+    # read werk table from parquet file which is located in ../processed/werk_data
+    werk_df = pd.read_parquet(werk_filepath + "/werk.parquet")
+    werk_df = werk_df
+    werk_by_name_df = werk_df.groupby('name').agg(
+        number_of_pages=('Page', 'nunique')
+        , material_categorization_level_1_set=(
+            'material_categorization_level_1', lambda x: transform_to_comma_separated_str_set(x))
+        , material_categorization_level_2_set=(
+            'material_categorization_level_2', lambda x: transform_to_comma_separated_str_set(x))
+        , material_categorization_level_3_set=(
+            'material_categorization_level_3', lambda x: transform_to_comma_separated_str_set(x))
+        # number of values in 'nominal_size' that are not null or Nan or None
+        , number_of_nominal_sizes=('nominal_size', lambda x: len([y for y in list(x) if y is not None]))
+        , average_tolerance=('tolerance', lambda x: sum([y for y in list(x) if y is not None]) / len(
+            [y for y in list(x) if y is not None]))
+        , tolerance_01=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.1 <= y]))
+        , tolerance_001=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.01 <= y < 0.1]))
+        , tolerance_0001=('tolerance', lambda x: len([y for y in list(x) if y is not None and y < 0.01]))
+        , enclosing_cuboid_volumes_set=('enclosing_cuboid_volume', lambda x: transform_to_comma_separated_str_set(x))
+    )
+    werk_by_name_df = werk_by_name_df.reset_index()
+    return werk_by_name_df
+
+
+def write_df_to_parquet(df, name, output_filepath):
+    logging.info("Writing dataframe " + name + " to " + output_filepath + "/" + name + ".parquet")
+    Path(output_filepath).mkdir(parents=True, exist_ok=True)
+    df.to_parquet(output_filepath + "/" + name + ".parquet")
+
+def write_werk_to_parquet(input_filepath, output_filepath):
     ret_val = process_all_werk_results_dirs_to_df(input_filepath)
     # ret_val is a list of dictionaries, each dictionary is a row in the werk table. Transform it to a dataframe
     df = pd.DataFrame(ret_val)
@@ -30,7 +73,7 @@ def main(input_filepath, output_filepath):
 
 
 # process all werk results directories and write them to manufuture database werk table
-def process_all_werk_results_dirs_to_df(starting_dir) -> list:
+def process_all_werk_results_dirs_to_df(starting_dir) -> pd.DataFrame:
     results_dirs = get_all_werk_results_dirs(starting_dir)
     all_results_list = []
     for results_dir in results_dirs:
@@ -38,7 +81,7 @@ def process_all_werk_results_dirs_to_df(starting_dir) -> list:
         for dict_werk_column_name_to_value in list_of_dict_werk_column_name_to_value:
             all_results_list = all_results_list + [dict_werk_column_name_to_value]
             # dal.insert_row_to_table('werk', dict_werk_column_name_to_value)
-    return all_results_list
+    return pd.DataFrame(all_results_list)
 
 
 # get all result directories from a starting directory
