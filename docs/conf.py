@@ -243,6 +243,7 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
 
-# -- MySQL access  ------------------------------------------------
+# -- MySQL access  -------------------------------------------------------------
 
 DB_CONNECTION_STRING = "mysql+pymysql://root:mysql123@localhost/manufuture"
+SKIPPED_RAW_MANUFUTURE_TABLES = ['wp_actionscheduler_actions', 'wp_wc_order_stats']

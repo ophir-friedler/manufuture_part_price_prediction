@@ -1,0 +1,71 @@
+import click
+import logging
+from pathlib import Path
+from dotenv import find_dotenv, load_dotenv
+from sqlalchemy import create_engine
+import pandas as pd
+
+from docs.conf import DB_CONNECTION_STRING, SKIPPED_RAW_MANUFUTURE_TABLES
+
+
+def get_db_connection():
+    sql_engine = create_engine(DB_CONNECTION_STRING)  # , pool_recycle=3600
+    db_connection = sql_engine.connect()
+    return db_connection
+
+
+def mysql_table_to_dataframe(table_name, db_connection) -> pd.DataFrame:
+    return pd.read_sql(f'SELECT * FROM `' + table_name + '`', db_connection)
+
+
+# Load MySQL DB to all_tables_df
+def fetch_all_tables_df():
+    db_connection = get_db_connection()
+    all_table_names = pd.read_sql(f'SHOW TABLES', db_connection)['Tables_in_manufuture']
+    all_tables_df = {}
+    for table in all_table_names:
+        all_tables_df[table] = mysql_table_to_dataframe(table, db_connection)
+
+    # Load e-mail logs to all_tables_df['email_logs']:
+    # all_tables_df['email_logs'] = pd.read_csv(EMAIL_LOGS_DIR)
+    return all_tables_df
+
+
+def clean_table_and_save(table_name, table_df):
+    if table_name == 'wp_posts':
+        # Some values in table_df['post_date_gmt'] have a value of '0000-00-00 00:00:00' which is not a valid datetime
+        # value. Replace these values with NaT
+        table_df['post_date_gmt'] = table_df['post_date_gmt'].replace('0000-00-00 00:00:00', None)
+        table_df['post_modified_gmt'] = table_df['post_modified_gmt'].replace('0000-00-00 00:00:00', None)
+
+    return table_df
+
+
+@click.command()
+@click.argument('output_filepath', type=click.Path())
+def main(output_filepath):
+    """ Reads Manufuture MySQL database as input and saves it to ../raw
+    """
+    logger = logging.getLogger(__name__)
+    logger.info('fetching raw data from Manufuture MySQL database')
+    all_tables_df = fetch_all_tables_df()
+    for table_name, table_df in all_tables_df.items():
+        if table_name in SKIPPED_RAW_MANUFUTURE_TABLES:
+            continue
+        table_df = clean_table_and_save(table_name, table_df)
+        print("Writing table " + table_name + " to " + output_filepath + "/" + table_name + ".parquet")
+        table_df.to_parquet(output_filepath + "/" + table_name + ".parquet")
+
+
+if __name__ == '__main__':
+    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+
+    # not used in this stub but often useful for finding various files
+    project_dir = Path(__file__).resolve().parents[2]
+
+    # find .env automagically by walking up directories until it's found, then
+    # load up the .env entries as environment variables
+    load_dotenv(find_dotenv())
+
+    main()

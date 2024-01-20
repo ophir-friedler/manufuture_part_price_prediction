@@ -1,4 +1,4 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: clean clean_mf_mysql fetch_mf_mysql data lint requirements sync_data_to_s3 sync_data_from_s3
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -25,6 +25,10 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
+## Fetch Manufuture Data from MySQL
+fetch_mf_mysql: requirements
+	$(PYTHON_INTERPRETER) src/data/fetch_manufuture_mysql.py data/raw
+
 ## Make Dataset
 data: requirements
 	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw data/processed
@@ -33,6 +37,10 @@ data: requirements
 clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
+
+## Delete all parquet files holding Manufuture MySQL tables
+clean_mf_mysql:
+	rm -rf data/raw/*.parquet
 
 ## Lint using flake8
 lint:
