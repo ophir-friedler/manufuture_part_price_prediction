@@ -47,5 +47,6 @@ def stats_by_num_candidates(all_tables_df):
         .reset_index().set_index('num_candidates') \
         .rename(columns={True: 'num_quotes_with_chosen_bid', False: 'num_quotes_without_chosen_bid'})
     # Calculate % of success per number of candidates
-    df['success_rate'] = 100.0 * df['num_quotes_with_chosen_bid'] / (df['num_quotes_with_chosen_bid'] + df['num_quotes_without_chosen_bid'])
+    df['success_rate'] = 100.0 * df['num_quotes_with_chosen_bid'] / (df['num_quotes_with_chosen_bid']
+                                                                     + df['num_quotes_without_chosen_bid'])
     all_tables_df['stats_by_num_candidates'] = df

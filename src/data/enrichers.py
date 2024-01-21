@@ -329,7 +329,8 @@ def calculate_werk_data_for_part(row, werk_by_name_df):
                           get_first_material_categorization_level_2_set(werk_data_for_name_df),
                       'first_material_categorization_level_3_set':
                           get_first_material_categorization_level_3_set(werk_data_for_name_df),
-                      'average_number_of_nominal_sizes_bucketed': get_average_number_of_nominal_sizes_bucketed(werk_data_for_name_df),
+                      'average_number_of_nominal_sizes_bucketed':
+                          get_average_number_of_nominal_sizes_bucketed(werk_data_for_name_df),
                       'average_number_of_nominal_sizes': get_average_number_of_nominal_sizes(werk_data_for_name_df),
                       'average_tolerance': get_average_tolerance(werk_data_for_name_df),
                       'average_tolerance_01': get_average_tolerance_01(werk_data_for_name_df),

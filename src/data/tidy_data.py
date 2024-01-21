@@ -8,6 +8,7 @@ import math
 
 from src.data import enrichers, aggregators, validators
 from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER_MANUFACTURER, COUNTRY_TO_ISO_MAP
+from src.utils.util_functions import get_all_dataframes_from_parquets
 
 
 @click.command()
@@ -15,13 +16,20 @@ from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER
 @click.argument('werk_input_filepath', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
 def main(mf_input_filepath, werk_input_filepath, output_filepath):
-    """ Reads Manufuture data from parquet files from data/raw, tidies it, and saves it to data/interrim as parquet files
+    """ Reads Manufuture and Werk data from parquet files, tidies it, and saves it to output_filepath as parquet files
     """
+    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
+    if Path(output_filepath).exists() and len(list(Path(output_filepath).iterdir())) > 0:
+        overwrite = input("The processed data directory is not empty. Do you want to overwrite it? (y/n): ")
+        if overwrite != 'y':
+            print("Exiting without overwriting output directory.")
+            return
+
     logger = logging.getLogger(__name__)
     logger.info('fetching raw data from Manufuture MySQL database')
-    # Read all parquet files from input_filepath, and save them to all_tables_df
-    all_tables_df = get_all_raw_tables(mf_input_filepath)
-    all_tables_df.update(get_all_raw_tables(werk_input_filepath))
+    # Read all parquet files from path, and save them to all_tables_df
+    all_tables_df = get_all_dataframes_from_parquets(mf_input_filepath)
+    all_tables_df.update(get_all_dataframes_from_parquets(werk_input_filepath))
     prepare_all_tidy_tables(all_tables_df)
     save_all_tables_to_parquets(all_tables_df, output_filepath)
 
@@ -330,15 +338,6 @@ def clean_wp_manufacturers(all_tables_df):
     # set 'house' column to type str and replace NaN with empty string '' (for later use in concat)
     all_tables_df['wp_manufacturers']['house'] = all_tables_df['wp_manufacturers']['house'].fillna('').astype('str')
     all_tables_df['wp_manufacturers']['cnc_turning_notes'] = all_tables_df['wp_manufacturers']['cnc_turning_notes'].fillna('').astype('str')
-
-
-def get_all_raw_tables(input_filepath):
-    all_tables_df = {}
-    for parquet_file in Path(input_filepath).glob('**/*.parquet'):
-        table_name = parquet_file.stem
-        print("Reading table " + table_name + " from " + str(parquet_file))
-        all_tables_df[table_name] = pd.read_parquet(parquet_file)
-    return all_tables_df
 
 
 if __name__ == '__main__':

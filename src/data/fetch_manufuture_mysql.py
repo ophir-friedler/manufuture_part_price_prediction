@@ -48,6 +48,13 @@ def main(output_filepath):
     """
     logger = logging.getLogger(__name__)
     logger.info('fetching raw data from Manufuture MySQL database')
+    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
+    if Path(output_filepath).exists() and len(list(Path(output_filepath).iterdir())) > 0:
+        overwrite = input("Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
+        if overwrite != 'y':
+            print("Exiting without overwriting output directory.")
+            return
+
     for table_name, table_df in fetch_all_tables_df().items():
         if table_name in SKIPPED_RAW_MANUFUTURE_TABLES:
             continue

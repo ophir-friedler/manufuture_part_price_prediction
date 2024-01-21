@@ -1,5 +1,6 @@
 import logging
 import math
+from pathlib import Path
 
 import pandas as pd
 
@@ -132,8 +133,7 @@ def transform_to_comma_separated_str_set(x):
     # if x is None or x is Nan or x is empty list, return None
     if x is None or (isinstance(x, float) and math.isnan(x)) or (isinstance(x, list) and len(x) == 0):
         return None
-    # For each value in x, if it is not None or Nan, add it to the set, then return the set as a comma separated string, make sure you return a set and not a list
-    ret_val =  ", ".join([str(y) for y in set([y for y in list(x) if y is not None and not (isinstance(y, float) and math.isnan(y))])])
+    ret_val = ", ".join([str(y) for y in set([y for y in list(x) if y is not None and not (isinstance(y, float) and math.isnan(y))])])
     return "[" + ret_val + "]"
 
 
@@ -165,3 +165,12 @@ def convert_str_set_to_float_set(str_set):
     except ValueError:
         logging.warning("Error: could not convert str set to float set: " + str(str_set))
         return None
+
+
+def get_all_dataframes_from_parquets(path):
+    all_tables_df = {}
+    for parquet_file in Path(path).glob('**/*.parquet'):
+        table_name = parquet_file.stem
+        print("Reading table " + table_name + " from " + str(parquet_file))
+        all_tables_df[table_name] = pd.read_parquet(parquet_file)
+    return all_tables_df

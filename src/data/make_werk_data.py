@@ -22,8 +22,14 @@ def main(input_filepath, output_filepath):
     """ Processes werk raw data into a dataframe (saved in ../processed/werk_data as parquet).
     Then process into werk_by_name dataframe (saved in ../processed/werk_by_name as parquet).
     """
+    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
+    if Path(output_filepath).exists() and len(list(Path(output_filepath).iterdir())) > 0:
+        overwrite = input("Werk interim data directory is not empty. Do you want to overwrite it? (y/n): ")
+        if overwrite != 'y':
+            print("Exiting without overwriting output directory.")
+            return
     logger = logging.getLogger(__name__)
-    logger.info('making final data set from raw data')
+    logger.info('Making werk and werk_by_name dataframes from raw data')
     write_werk_to_parquet(input_filepath, output_filepath)
     # if output_filepath/werk.parquet does not exist, then create it
     if not os.path.exists(output_filepath + "/werk.parquet"):
@@ -115,30 +121,43 @@ def extract_features_form_werk_results_dir(results_dir):
                     if sectional_dir == 'External_Dimensions':
                         continue
                     sectional_measures_list = sectional_data_dict['sectional_measures']
-                    for index, measure in enumerate(sectional_measures_list):
-                        dict_werk_column_name_to_value = canvas_external_dimensions_column_name_to_value.copy()
-                        dict_werk_column_name_to_value['Sectional'] = sectional_dir
-                        dict_werk_column_name_to_value['Item'] = index
-                        dict_werk_column_name_to_value['nominal_size'] = float(measure.label.size.nominal_size)
-                        # check for null values before casting to float and assigning
-                        if measure.label.size_tolerance is None:
-                            dict_werk_column_name_to_value['size_tolerance_deviation_lower'] = None
-                            dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = None
-                        else:
-                            if hasattr(measure.label.size_tolerance, 'deviation_lower') and measure.label.size_tolerance.deviation_lower is not None:
-                                dict_werk_column_name_to_value['size_tolerance_deviation_lower'] = float(measure.label.size_tolerance.deviation_lower)
-                            else:
-                                dict_werk_column_name_to_value['size_tolerance_deviation_lower'] = None
-                            if hasattr(measure.label.size_tolerance, 'deviation_upper') and measure.label.size_tolerance.deviation_upper is not None:
-                                dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = float(measure.label.size_tolerance.deviation_upper)
-                            else:
-                                dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = None
-                        # if size_tolerance_deviation_lower and size_tolerance_deviation_upper are both not null, then calculate the difference into 'tolerance'
-                        if dict_werk_column_name_to_value['size_tolerance_deviation_lower'] is not None \
-                                and dict_werk_column_name_to_value['size_tolerance_deviation_upper'] is not None:
-                            dict_werk_column_name_to_value['tolerance'] = dict_werk_column_name_to_value['size_tolerance_deviation_upper'] - dict_werk_column_name_to_value['size_tolerance_deviation_lower']
-                        list_of_dict_werk_column_name_to_value.append(dict_werk_column_name_to_value)
+                    add_sectional_measures(canvas_external_dimensions_column_name_to_value,
+                                           list_of_dict_werk_column_name_to_value, sectional_dir,
+                                           sectional_measures_list)
     return list_of_dict_werk_column_name_to_value
+
+
+def add_sectional_measures(canvas_external_dimensions_column_name_to_value, list_of_dict_werk_column_name_to_value,
+                           sectional_dir, sectional_measures_list):
+    for index, measure in enumerate(sectional_measures_list):
+        dict_werk_column_name_to_value = canvas_external_dimensions_column_name_to_value.copy()
+        dict_werk_column_name_to_value['Sectional'] = sectional_dir
+        dict_werk_column_name_to_value['Item'] = index
+        dict_werk_column_name_to_value['nominal_size'] = float(measure.label.size.nominal_size)
+        # check for null values before casting to float and assigning
+        if measure.label.size_tolerance is None:
+            dict_werk_column_name_to_value['size_tolerance_deviation_lower'] = None
+            dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = None
+        else:
+            if hasattr(measure.label.size_tolerance,
+                       'deviation_lower') and measure.label.size_tolerance.deviation_lower is not None:
+                dict_werk_column_name_to_value['size_tolerance_deviation_lower'] = float(
+                    measure.label.size_tolerance.deviation_lower)
+            else:
+                dict_werk_column_name_to_value['size_tolerance_deviation_lower'] = None
+            if hasattr(measure.label.size_tolerance,
+                       'deviation_upper') and measure.label.size_tolerance.deviation_upper is not None:
+                dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = float(
+                    measure.label.size_tolerance.deviation_upper)
+            else:
+                dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = None
+        if dict_werk_column_name_to_value['size_tolerance_deviation_lower'] is not None \
+                and dict_werk_column_name_to_value['size_tolerance_deviation_upper'] is not None:
+            dict_werk_column_name_to_value['tolerance'] = dict_werk_column_name_to_value[
+                                                              'size_tolerance_deviation_upper'] - \
+                                                          dict_werk_column_name_to_value[
+                                                              'size_tolerance_deviation_lower']
+        list_of_dict_werk_column_name_to_value.append(dict_werk_column_name_to_value)
 
 
 # Resuts -> Page -> Sheet -> Canvas -> External_Dimensions.json -> enclosing_cuboid -> depth, height, width
