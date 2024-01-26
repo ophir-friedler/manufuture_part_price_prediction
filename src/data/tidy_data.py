@@ -8,7 +8,7 @@ import math
 
 from src.data import enrichers, aggregators, validators
 from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER_MANUFACTURER, COUNTRY_TO_ISO_MAP
-from src.utils.util_functions import get_all_dataframes_from_parquets
+from src.utils.util_functions import get_all_dataframes_from_parquets, is_path_empty
 
 
 @click.command()
@@ -18,15 +18,14 @@ from src.utils.util_functions import get_all_dataframes_from_parquets
 def main(mf_input_filepath, werk_input_filepath, output_filepath):
     """ Reads Manufuture and Werk data from parquet files, tidies it, and saves it to output_filepath as parquet files
     """
-    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
-    if Path(output_filepath).exists() and len(list(Path(output_filepath).iterdir())) > 0:
-        overwrite = input("The processed data directory is not empty. Do you want to overwrite it? (y/n): ")
+    if not is_path_empty(output_filepath):
+        overwrite = input("tidy_data: The processed data directory is not empty. Do you want to overwrite it? (y/n): ")
         if overwrite != 'y':
             print("Exiting without overwriting output directory.")
             return
 
     logger = logging.getLogger(__name__)
-    logger.info('fetching raw data from Manufuture MySQL database')
+    logger.info('fetching parquets from Manufuture and Werk')
     # Read all parquet files from path, and save them to all_tables_df
     all_tables_df = get_all_dataframes_from_parquets(mf_input_filepath)
     all_tables_df.update(get_all_dataframes_from_parquets(werk_input_filepath))

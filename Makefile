@@ -1,4 +1,4 @@
-.PHONY: clean clean_mf_data mf_data werk_data clean_werk_data lint requirements train_model
+.PHONY: clean notebook tidy_data mf_data werk_data lint requirements train_model
 # sync_data_to_s3 sync_data_from_s3
 
 #################################################################################
@@ -12,7 +12,9 @@ PROJECT_NAME = manufuture_part_price_prediction
 PYTHON_INTERPRETER = python3
 RAW_WERK_DATA = data/raw/werk_data
 EXTERNAL_WERK_DATA = data/external/werk_data
+EXTERNAL_MF_DATA = data/external/mf_data
 RAW_MF_DATA = data/raw/mf_data
+RAW_MF_PRICES = data/raw/mf_prices
 INTERIM_WERK_DATA = data/interim/werk_data
 INTERIM_MF_DATA = data/interim/mf_data
 PROCESSED_DATA = data/processed
@@ -34,36 +36,39 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 ## Fetch Manufuture Data from MySQL
-mf_data: requirements
-	$(PYTHON_INTERPRETER) src/data/fetch_manufuture_mysql.py $(RAW_MF_DATA)
+mf_data: ## requirements
+	$(PYTHON_INTERPRETER) src/data/fetch_mf_mysql.py $(RAW_MF_DATA)
+	$(PYTHON_INTERPRETER) src/data/fetch_mf_prices.py $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
+
 
 ## Make Werk Dataset
-werk_data: requirements
+werk_data: ## requirements
 	$(PYTHON_INTERPRETER) src/data/make_werk_data.py $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
 
-## Fetch Manufuture and Werk data from parquets and prepare tidy data
+
+## Prepare tidy data (handle Manufuture and Werk data if needed)
 tidy_data: mf_data werk_data
-	$(PYTHON_INTERPRETER) src/data/tidy_data.py data/raw $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
+	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
+
+
+## Run jupyter notebook
+notebook: ## requirements
+	jupyter notebook
+
 
 train_model: tidy_data
 	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
 
 
-## Delete all compiled Python files, and all parquet files holding Manufuture MySQL tables and Werk data
-clean: clean_mf_data clean_werk_data
+## Delete all compiled Python files, and all parquet files
+clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
-	rm -rf $(PROCESSED_DATA)/*.parquet
+	find data/processed -type f -name "*.parquet" -delete
+	find data/interim -type f -name "*.parquet" -delete
+	find data/raw -type f -name "*.parquet" -delete
 
 
-## Delete all parquet files holding Manufuture MySQL tables
-clean_mf_data:
-	rm -rf $(RAW_MF_DATA)/*.parquet
-	rm -rf data/interim/*.parquet
-
-## Delete all parquet files holding Werk data
-clean_werk_data:
-	rm -rf $(INTERIM_WERK_DATA)/*.parquet
 
 ## Lint using flake8
 lint:

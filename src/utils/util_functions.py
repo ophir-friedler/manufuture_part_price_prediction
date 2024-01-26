@@ -170,7 +170,24 @@ def convert_str_set_to_float_set(str_set):
 def get_all_dataframes_from_parquets(path):
     all_tables_df = {}
     for parquet_file in Path(path).glob('**/*.parquet'):
-        table_name = parquet_file.stem
+        # set the table name to be the relative path from path to parquet_file without the .parquet suffix
+        table_name = str(parquet_file.relative_to(path)).replace('.parquet', '')
         print("Reading table " + table_name + " from " + str(parquet_file))
         all_tables_df[table_name] = pd.read_parquet(parquet_file)
     return all_tables_df
+
+
+def get_all_dataframes_in_data_dirs():
+    return get_all_dataframes_from_parquets('../data')
+
+
+def is_path_empty(path):
+    if not Path(path).exists():
+        return False
+    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it.
+    files_list = list(Path(path).iterdir())
+    # Ignore .gitkeep and .DS_Store files
+    files_list = [file for file in files_list if file.name not in ['.gitkeep', '.DS_Store']]
+    if len(files_list) > 0:
+        return False
+    return True

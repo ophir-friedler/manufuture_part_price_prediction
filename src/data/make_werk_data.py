@@ -13,6 +13,7 @@ from werk24 import W24Measure
 from werk24.models.title_block import W24TitleBlock
 
 from src.features.build_features import transform_to_comma_separated_str_set
+from src.utils.util_functions import is_path_empty
 
 
 @click.command()
@@ -22,14 +23,17 @@ def main(input_filepath, output_filepath):
     """ Processes werk raw data into a dataframe (saved in ../processed/werk_data as parquet).
     Then process into werk_by_name dataframe (saved in ../processed/werk_by_name as parquet).
     """
-    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
-    if Path(output_filepath).exists() and len(list(Path(output_filepath).iterdir())) > 0:
+    logger = logging.getLogger(__name__)
+    logger.info('Making werk and werk_by_name dataframes from raw data')
+
+    # if output_filepath doe not exist, create it
+    Path(output_filepath).mkdir(parents=True, exist_ok=True)
+
+    if not is_path_empty(output_filepath):
         overwrite = input("Werk interim data directory is not empty. Do you want to overwrite it? (y/n): ")
         if overwrite != 'y':
             print("Exiting without overwriting output directory.")
             return
-    logger = logging.getLogger(__name__)
-    logger.info('Making werk and werk_by_name dataframes from raw data')
     write_werk_to_parquet(input_filepath, output_filepath)
     # if output_filepath/werk.parquet does not exist, then create it
     if not os.path.exists(output_filepath + "/werk.parquet"):

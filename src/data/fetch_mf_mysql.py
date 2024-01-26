@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 import pandas as pd
 
 from src.data.config import DB_CONNECTION_STRING, SKIPPED_RAW_MANUFUTURE_TABLES
+from src.utils.util_functions import is_path_empty
 
 
 def get_db_connection():
@@ -48,9 +49,13 @@ def main(output_filepath):
     """
     logger = logging.getLogger(__name__)
     logger.info('fetching raw data from Manufuture MySQL database')
+
+    # if output_filepath doe not exist, create it
+    Path(output_filepath).mkdir(parents=True, exist_ok=True)
+
     # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
-    if Path(output_filepath).exists() and len(list(Path(output_filepath).iterdir())) > 0:
-        overwrite = input("Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
+    if not is_path_empty(output_filepath):
+        overwrite = input("fetch_mf_mysql: Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
         if overwrite != 'y':
             print("Exiting without overwriting output directory.")
             return
