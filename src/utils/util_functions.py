@@ -1,8 +1,11 @@
 import logging
 import math
+import os
 from pathlib import Path
 
 import pandas as pd
+
+from src.config import THIS_PROJECT_DIR
 
 TABLES_TO_IGNORE_IN_SEARCH = ['wp_quotes', 'pm_project_manufacturer', 'pam_project_active_manufacturer_th_1']
 
@@ -178,7 +181,7 @@ def get_all_dataframes_from_parquets(path):
 
 
 def get_all_dataframes_in_data_dirs():
-    return get_all_dataframes_from_parquets('../data')
+    return get_all_dataframes_from_parquets(os.environ.get(THIS_PROJECT_DIR) + '/data')
 
 
 def is_path_empty(path):

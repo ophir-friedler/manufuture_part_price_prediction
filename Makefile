@@ -6,6 +6,7 @@
 #################################################################################
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+export THIS_PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 PROFILE = default
 PROJECT_NAME = manufuture_part_price_prediction
@@ -51,7 +52,7 @@ tidy_data: mf_data werk_data
 	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
 
 
-## Run jupyter notebook
+## Run jupyter notebook server
 notebook: ## requirements
 	jupyter notebook
 
