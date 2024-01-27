@@ -55,10 +55,11 @@ def main(output_filepath):
 
     # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
     if not is_path_empty(output_filepath):
-        overwrite = input("fetch_mf_mysql: Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
-        if overwrite != 'y':
-            print("Exiting without overwriting output directory.")
-            return
+        return
+        # overwrite = input("fetch_mf_mysql: Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
+        # if overwrite != 'y':
+        #     print("Exiting without overwriting output directory.")
+        #     return
 
     for table_name, table_df in fetch_all_tables_df().items():
         if table_name in SKIPPED_RAW_MANUFUTURE_TABLES:

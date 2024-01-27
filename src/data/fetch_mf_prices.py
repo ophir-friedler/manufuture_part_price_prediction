@@ -21,10 +21,11 @@ def main(input_filepath, output_filepath):
     Path(output_filepath).mkdir(parents=True, exist_ok=True)
 
     if not is_path_empty(output_filepath):
-        overwrite = input("fetch_mf_prices: Manufuture's raw prices directory is not empty. Do you want to overwrite it? (y/n): ")
-        if overwrite != 'y':
-            print("Exiting without overwriting output directory.")
-            return
+        return
+        # overwrite = input("fetch_mf_prices: Manufuture's raw prices directory is not empty. Do you want to overwrite it? (y/n): ")
+        # if overwrite != 'y':
+        #     print("Exiting without overwriting output directory.")
+        #     return
 
     # Read csv files from input_path and save them to dataframes
     raw_csv_to_df = {}

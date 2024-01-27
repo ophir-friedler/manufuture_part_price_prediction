@@ -193,6 +193,7 @@ def enrich_wp_type_bid(all_tables_df):
 # Add netsuite prices to wp_type_part
 # Add werk data to wp_type_part
 def enrich_wp_type_part(all_tables_df):
+    logging.info("Enriching wp_type_quote with: price_bucket, quantity_bucket, werk data ")
     validate_existence(all_tables_df, ['wp_type_part', 'werk_by_name'])
     all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo'], how='left',
                                                                         left_on='name', right_on='Memo_netsuite')
@@ -204,6 +205,9 @@ def enrich_wp_type_part(all_tables_df):
     werk_data_for_parts_df = all_tables_df['wp_type_part'].apply(
         lambda row: calculate_werk_data_for_part(row, all_tables_df['werk_by_name']), axis=1)
     all_tables_df['wp_type_part'] = pd.concat([all_tables_df['wp_type_part'], werk_data_for_parts_df], axis=1)
+
+    all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo_496'], how='left',
+                                                                    left_on='name', right_on='Memo_netsuite_496')
 
 
 def get_first_material_categorization_level_1_set(werk_data_for_name_df):

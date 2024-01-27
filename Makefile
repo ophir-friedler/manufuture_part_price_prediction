@@ -49,14 +49,14 @@ werk_data: ## requirements
 
 ## Prepare tidy data (handle Manufuture and Werk data if needed)
 tidy_data: mf_data werk_data
-	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
+	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(RAW_MF_PRICES) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
 
 
 ## Run jupyter notebook server
 notebook: ## requirements
 	jupyter notebook
 
-
+## Train pricing model on processed data and save it to models
 train_model: tidy_data
 	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
 

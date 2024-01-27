@@ -2,20 +2,18 @@ import itertools
 import json
 import logging
 
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 from keras.layers import Dense
 from keras.models import Sequential
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from src.models.config import PART_NETSUITE_MEAN_PRICE_COLUMN_NAME
 
 
 class PartPricePredictor:
-    _label_column = PART_NETSUITE_MEAN_PRICE_COLUMN_NAME
+    _label_column = 'Rate (EURO) mean_netsuite_496' # 'Rate mean_netsuite'  #
     _categorical_features = None
-    _input_table_name = 'part_price_training_table'
+    _input_table_name = 'part_price_training_table_496' # 'part_price_training_table'  #
     _training_table_name = _input_table_name + '_training'
     _is_model_trained = False
     _last_neuron_function = 'linear'
@@ -164,7 +162,7 @@ class PartPricePredictor:
                 # Visualize the distribution of the ratio
                 plt.figure(figsize=(10, 6))
                 sns.histplot(ratio, bins=100, kde=True)
-                plt.title('Distribution of Ratio (Actual / Predicted)')
+                plt.title('Distribution of Ratio (Actual price / Predicted price)')
                 plt.xlabel('Ratio')
                 plt.ylabel('Frequency')
                 plt.show()

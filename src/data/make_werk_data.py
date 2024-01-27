@@ -30,10 +30,12 @@ def main(input_filepath, output_filepath):
     Path(output_filepath).mkdir(parents=True, exist_ok=True)
 
     if not is_path_empty(output_filepath):
-        overwrite = input("Werk interim data directory is not empty. Do you want to overwrite it? (y/n): ")
-        if overwrite != 'y':
-            print("Exiting without overwriting output directory.")
-            return
+        return
+        # overwrite = input("Werk interim data directory is not empty. Do you want to overwrite it? (y/n): ")
+        # if overwrite != 'y':
+        #     print("Exiting without overwriting output directory.")
+        #     return
+
     write_werk_to_parquet(input_filepath, output_filepath)
     # if output_filepath/werk.parquet does not exist, then create it
     if not os.path.exists(output_filepath + "/werk.parquet"):
