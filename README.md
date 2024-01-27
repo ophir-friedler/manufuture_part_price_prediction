@@ -7,10 +7,10 @@ Project Organization
 ------------
 
     ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+    ├── Makefile           <- clean, notebook, tidy_data, mf_data, werk_data, lint, requirements, train_model
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
-    │   ├── external       <- Data from third party sources.
+    │   ├── external       <- Data from third party sources, including Manufuture prices from csv
     │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
     │   └── raw            <- The original, immutable data dump.
@@ -37,7 +37,8 @@ Project Organization
     │   │
     │   ├── data           <- Scripts to download or generate data
     │   │   └── make_werk_data.py
-    │   │   └── fetch_manufuture_data.py
+    │   │   └── fetch_mf_data.py
+    │   │   └── fetch_mf_prices.py
     │   │   └── tidy_data.py
     │   │
     │   ├── features       <- Scripts to turn raw data into features for modeling
