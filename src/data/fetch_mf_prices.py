@@ -1,9 +1,9 @@
-import click
 import logging
 from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
-from sqlalchemy import create_engine
+
+import click
 import pandas as pd
+from dotenv import find_dotenv, load_dotenv
 
 from src.utils.util_functions import is_path_empty
 

@@ -11,9 +11,9 @@ from sklearn.model_selection import train_test_split
 
 
 class PartPricePredictor:
-    _label_column = 'Rate (EURO) mean_netsuite_496' # 'Rate mean_netsuite'  #
+    _label_column = 'Rate (EURO) mean_netsuite_496'  # 'Rate mean_netsuite'  #
     _categorical_features = None
-    _input_table_name = 'part_price_training_table_496' # 'part_price_training_table'  #
+    _input_table_name = 'part_price_training_table_496'  # 'part_price_training_table'  #
     _training_table_name = _input_table_name + '_training'
     _is_model_trained = False
     _last_neuron_function = 'linear'
@@ -93,17 +93,6 @@ class PartPricePredictor:
 
         logging.warning("Saved model to: " + model_save_path)
 
-    # def load_model(self, model_path):
-    #     self._model = tf.keras.models.load_model(model_path)
-    #     model_name = model_path.split('/')[-1].split('.')[0]
-    #     list_of_relu_layer_widths_str = model_path.split('__')[1]
-    #     # convert string to list of integers
-    #     self._list_of_relu_layer_widths = [int(layer_width) for layer_width in list_of_relu_layer_widths_str.split(',')]
-    #     self._is_model_trained = True
-    #     self._x_train_two_rows = pd.read_parquet(STATIC_DATA_DIR_PATH + model_name + '_x_train_two_rows.parquet')
-    #     with open(STATIC_DATA_DIR_PATH + '_model_input_columns.json', 'r') as file:
-    #         self._model_input_columns = json.load(file)
-
     def _validate_configuration(self):
         all_features_set = set(self._selected_singles).union(
             set([single for double in self._selected_doubles for single in double]))
@@ -129,7 +118,8 @@ class PartPricePredictor:
                 X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=0)
                 self._x_train_two_rows = X_train.head(2)
             self._x_train_two_rows = X_train.head(2)
-            self._model_input_columns = {column_name: column_index for column_index, column_name in enumerate(X_train.columns)}
+            self._model_input_columns = {column_name: column_index for column_index, column_name in
+                                         enumerate(X_train.columns)}
 
             input_dim = len(X_train.columns)
 
@@ -206,7 +196,8 @@ class PartPricePredictor:
     def price_predictions_for_all_feature_combinations(self, all_tables_df, csv_filename=None):
         print("Started price_predictions_for_all_feature_combinations")
         # collect all feature values for all features, and then create a cartesian product of all feature values
-        all_values = {feature: all_tables_df[self._input_table_name][feature].unique() for feature in self._all_part_features}
+        all_values = {feature: all_tables_df[self._input_table_name][feature].unique() for feature in
+                      self._all_part_features}
 
         combinations = itertools.product(*[all_values[feature] for feature in self._all_part_features])
 
@@ -236,7 +227,8 @@ class PartPricePredictor:
             # check if the missing columns are the same as the ones in the model_input_columns
             if len(missing_columns) != len(missing_columns_1) \
                     or len(set(missing_columns).symmetric_difference(set(missing_columns_1))) > 0:
-                logging.error("inconsistency in the missing columns : " + str(missing_columns) + " vs " + str(missing_columns_1))
+                logging.error(
+                    "inconsistency in the missing columns : " + str(missing_columns) + " vs " + str(missing_columns_1))
             else:
                 logging.error("columns from two rows : " + str(self._x_train_two_rows.columns))
                 logging.error("columns from model_input_columns : " + str(self._model_input_columns.keys()))
