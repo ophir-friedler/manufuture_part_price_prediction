@@ -1,5 +1,9 @@
 import sys
 
+import pandas as pd
+
+from src.data.fetch_mf_mysql import get_db_connection
+
 REQUIRED_PYTHON = "python3"
 
 
@@ -18,7 +22,13 @@ def main():
             "This project requires Python {}. Found: Python {}".format(
                 required_major, sys.version))
     else:
-        print(">>> Development environment passes all tests!")
+        print(">>> Development environment passes basic tests!")
+
+    db_connection = get_db_connection()
+    if db_connection is not None:
+        print(">>> MySQL connection established!")
+    all_table_names = pd.read_sql(f'SHOW TABLES', db_connection)['Tables_in_manufuture']
+    print(">>> Tables in Manufuture MySQL database: " + str(all_table_names.keys()))
 
 
 if __name__ == '__main__':

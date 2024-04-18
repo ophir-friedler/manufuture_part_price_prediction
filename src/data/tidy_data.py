@@ -20,11 +20,11 @@ def main(mf_data_filepath, mf_prices_filepath, werk_input_filepath, output_filep
     """ Reads Manufuture and Werk data from parquet files, tidies it, and saves it to output_filepath as parquet files
     """
     if not is_path_empty(output_filepath):
-        return
-        # overwrite = input("tidy_data: The processed data directory is not empty. Do you want to overwrite it? (y/n): ")
-        # if overwrite != 'y':
-        #     print("Exiting without overwriting output directory.")
-        #     return
+        # return
+        overwrite = input("tidy_data: The processed data directory is not empty. Do you want to overwrite it? (y/n): ")
+        if overwrite != 'y':
+            print("Exiting without overwriting output directory.")
+            return
 
     logger = logging.getLogger(__name__)
     logger.info('fetching parquets from Manufuture and Werk')
@@ -52,6 +52,8 @@ def prepare_all_tidy_tables(all_tables_df):
     build_user_to_entity_rel(all_tables_df)
     build_netsuite_by_memo(all_tables_df)
     build_netsuite_by_memo_496(all_tables_df)
+    # build_netsuite_by_item_number(all_tables_df, '496')
+    build_netsuite_by_item_number(all_tables_df, '646')
     enrichers.enrich_all(all_tables_df)
     build_training_data_tables(all_tables_df)
     # Aggregated statistics
@@ -70,6 +72,8 @@ def build_training_data_tables(all_tables_df):
     build_proj_manu_training_table(all_tables_df, MIN_NUM_BIDS_PER_MANUFACTURER)
     build_part_price_training_table(all_tables_df)
     build_part_price_training_table_496(all_tables_df)
+    # build_part_price_training_table_by_id(all_tables_df, '496')
+    build_part_price_training_table_by_id(all_tables_df, '646')
 
 
 def build_part_price_training_table(all_tables_df):
@@ -88,6 +92,26 @@ def build_part_price_training_table_496(all_tables_df):
     # Filter out parts with volume <= 0
     parts_with_prices_and_werk = parts_with_prices_and_werk[parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
     all_tables_df['part_price_training_table_496'] = parts_with_prices_and_werk
+
+
+def build_part_price_training_table_by_id(all_tables_df, netsuite_file_id):
+    part_price_training_table_name = 'part_price_training_table_' + netsuite_file_id
+    wp_type_part_table_name = 'wp_type_part_' + str(netsuite_file_id)
+    logging.info("Building " + part_price_training_table_name + " from " + wp_type_part_table_name)
+    # Check that wp_type_part_table_name exists in all_tables_df
+    if wp_type_part_table_name not in all_tables_df.keys():
+        logging.error("wp_type_part_table_name " + wp_type_part_table_name + " not in all_tables_df")
+        return
+
+    # print(list(all_tables_df[wp_type_part_table_name].columns))
+
+    netsuite_prices_col_name = 'Rate (EURO) mean_netsuite_' + netsuite_file_id
+    parts_with_netsuite_prices = all_tables_df[wp_type_part_table_name][all_tables_df[wp_type_part_table_name][netsuite_prices_col_name].notnull()]
+    parts_with_prices_and_werk = parts_with_netsuite_prices[parts_with_netsuite_prices['found_werk'] == 1]
+    # Filter out parts with volume <= 0
+    parts_with_prices_and_werk = parts_with_prices_and_werk[parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
+
+    all_tables_df[part_price_training_table_name] = parts_with_prices_and_werk
 
 
 # Build pam + filter by project requirements
@@ -209,6 +233,27 @@ def build_netsuite_by_memo_496(all_tables_df):
     netsuite_by_memo = netsuite_by_memo.reset_index()
     netsuite_by_memo = netsuite_by_memo.add_suffix('_netsuite_496')
     all_tables_df['netsuite_by_memo_496'] = netsuite_by_memo
+
+
+def build_netsuite_by_item_number(all_tables_df, netsuite_file_id):
+    logging.info(f"Building netsuite_by_item_number: {netsuite_file_id}")
+    netsuite_file_name = f'PurchaseOrderLinesResults{netsuite_file_id}'
+    netsuite_prices_df = all_tables_df[netsuite_file_name]
+    netsuite_prices_df['average_Rate'] = netsuite_prices_df.groupby('Item Number')['Rate (EURO)'].transform('mean')
+    netsuite_prices_df['min_Rate'] = netsuite_prices_df.groupby('Item Number')['Rate (EURO)'].transform('min')
+    netsuite_prices_df['max_Rate'] = netsuite_prices_df.groupby('Item Number')['Rate (EURO)'].transform('max')
+    netsuite_prices_df['num_duplicates'] = netsuite_prices_df.groupby('Item Number')['Rate (EURO)'].transform('count')
+    all_tables_df[netsuite_file_name] = netsuite_prices_df
+
+    netsuite_by_item_number = netsuite_prices_df.groupby('Item Number').agg({'Rate (EURO)': ['min', 'max', 'count', 'mean'],
+                                                               'Quantity': ['min', 'max']
+                                                               })
+    netsuite_by_item_number.columns = [' '.join(col).strip() for col in netsuite_by_item_number.columns.values]
+    netsuite_by_item_number = netsuite_by_item_number.reset_index()
+    netsuite_suffix = f'_netsuite_{netsuite_file_id}'
+    netsuite_by_item_number = netsuite_by_item_number.add_suffix(netsuite_suffix)
+    item_number_table_name = 'netsuite_by_item_number_' + netsuite_file_id
+    all_tables_df[item_number_table_name] = netsuite_by_item_number
 
 
 # Dependencies: all_tables_df['wp_usermeta']

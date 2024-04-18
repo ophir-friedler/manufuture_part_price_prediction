@@ -18,17 +18,19 @@ def main(input_filepath, model_output_filepath):
     logger = logging.getLogger(__name__)
     logger.info('Starting model training...')
     all_tables_df = get_all_dataframes_from_parquets(input_filepath)
-    part_price_predictor = pred_part_price.PartPricePredictor(all_part_features=all_part_features)
+    part_price_predictor = pred_part_price.PartPricePredictor()
     part_price_predictor.build_model(all_tables_df=all_tables_df,
                                      list_of_relu_layer_widths=LIST_OF_RELU_LAYER_WIDTHS,
                                      epochs=EPOCHS,
                                      batch_size=BATCH_SIZE,
+                                     all_part_features=all_part_features,
                                      evaluate=True,
-                                     verbose=False
+                                     verbose=True
                                      )
     logger.info('Finished model training.')
     print(part_price_predictor.model)
-    part_price_predictor.save_model(model_output_filepath)
+    # part_price_predictor.save_model(model_output_filepath)
+    part_price_predictor.save_model_new()
     logger.info('Saved model to ' + str(model_output_filepath))
 
 

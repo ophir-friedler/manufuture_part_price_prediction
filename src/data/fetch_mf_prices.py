@@ -21,16 +21,18 @@ def main(input_filepath, output_filepath):
     Path(output_filepath).mkdir(parents=True, exist_ok=True)
 
     if not is_path_empty(output_filepath):
-        return
-        # overwrite = input("fetch_mf_prices: Manufuture's raw prices directory is not empty. Do you want to overwrite it? (y/n): ")
-        # if overwrite != 'y':
-        #     print("Exiting without overwriting output directory.")
-        #     return
+        # return
+        overwrite = input("fetch_mf_prices: Manufuture's raw prices directory is not empty. Do you want to overwrite it? (y/n): ")
+        if overwrite != 'y':
+            print("Exiting without overwriting output directory.")
+            return
 
-    # Read csv files from input_path and save them to dataframes
     raw_csv_to_df = {}
     for csv_file in Path(input_filepath).iterdir():
+        if csv_file.suffix != '.csv':
+            continue
         table_name = csv_file.stem
+        logging.info('Reading table ' + table_name + ' from ' + str(csv_file))
         raw_csv_to_df[table_name] = pd.read_csv(csv_file)
 
     # Save dataframes to parquet files

@@ -1,4 +1,4 @@
-.PHONY: clean notebook tidy_data mf_data werk_data lint requirements train_model
+.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model load_model_and_predict
 # sync_data_to_s3 sync_data_from_s3
 
 #################################################################################
@@ -38,8 +38,12 @@ requirements: test_environment
 
 ## Fetch Manufuture Data from MySQL
 mf_data: ## requirements
-	$(PYTHON_INTERPRETER) src/data/fetch_mf_mysql.py $(RAW_MF_DATA)
 	$(PYTHON_INTERPRETER) src/data/fetch_mf_prices.py $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
+	$(PYTHON_INTERPRETER) src/data/fetch_mf_mysql.py $(RAW_MF_DATA)
+
+## Activate python environment
+activate_env: ## requirements
+	@echo ">>> Activation command: source activate $(PROJECT_NAME)"
 
 
 ## Make Werk Dataset
@@ -60,6 +64,10 @@ notebook: ## requirements
 train_model: tidy_data
 	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
 
+
+## Load model and predict: make load_model_and_predict MODEL_NAME=model__[100, 50, 20, 10]__T__part_price_training_table_646_training
+load_model_and_predict:
+	$(PYTHON_INTERPRETER) src/models/load_model_and_predict.py  --model_name $(MODEL_NAME)
 
 ## Delete all compiled Python files, and all parquet files
 clean:

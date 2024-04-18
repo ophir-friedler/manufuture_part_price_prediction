@@ -11,4 +11,4 @@ all_part_features = [
 ]
 LIST_OF_RELU_LAYER_WIDTHS = [100, 50, 20, 10]
 BATCH_SIZE = 10
-EPOCHS = 60
+EPOCHS = 70

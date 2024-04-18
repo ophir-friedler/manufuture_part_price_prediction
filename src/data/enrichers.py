@@ -194,9 +194,11 @@ def enrich_wp_type_bid(all_tables_df):
 # Add werk data to wp_type_part
 def enrich_wp_type_part(all_tables_df):
     logging.info("Enriching wp_type_quote with: price_bucket, quantity_bucket, werk data ")
-    validate_existence(all_tables_df, ['wp_type_part', 'werk_by_name'])
+    validate_existence(all_tables_df, ['wp_type_part', 'werk_by_name', 'netsuite_by_memo', 'netsuite_by_memo_496'])
+
     all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo'], how='left',
                                                                         left_on='name', right_on='Memo_netsuite')
+
     all_tables_df['wp_type_part']['price_bucket'] = all_tables_df['wp_type_part']['unit_price'].apply(bucket_prices)
     all_tables_df['wp_type_part']['quantity_bucket'] = all_tables_df['wp_type_part'].apply(
         lambda row: bin_feature(row['quantity'], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 500]), axis=1)
@@ -206,8 +208,16 @@ def enrich_wp_type_part(all_tables_df):
         lambda row: calculate_werk_data_for_part(row, all_tables_df['werk_by_name']), axis=1)
     all_tables_df['wp_type_part'] = pd.concat([all_tables_df['wp_type_part'], werk_data_for_parts_df], axis=1)
 
+    # print all keys of all_tables_df
+    print(list(all_tables_df.keys()))
+
     all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo_496'], how='left',
                                                                     left_on='name', right_on='Memo_netsuite_496')
+
+    for netsuite_file_id in [646]:
+        print(list(all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)].keys()))
+        all_tables_df['wp_type_part_' + str(netsuite_file_id)] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)], how='left',
+                                                                        left_on='post_id', right_on='Item Number_netsuite_' + str(netsuite_file_id))
 
 
 def get_first_material_categorization_level_1_set(werk_data_for_name_df):

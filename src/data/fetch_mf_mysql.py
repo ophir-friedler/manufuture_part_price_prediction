@@ -21,8 +21,10 @@ def mysql_table_to_dataframe(table_name, db_connection) -> pd.DataFrame:
 
 # Load MySQL DB to all_tables_df
 def fetch_all_tables_df():
+    logging.info('fetching raw data from Manufuture MySQL database')
     db_connection = get_db_connection()
     all_table_names = pd.read_sql(f'SHOW TABLES', db_connection)['Tables_in_manufuture']
+    # logging.info('Tables in Manufuture MySQL database: ' + str(all_table_names))
     all_tables_df = {}
     for table in all_table_names:
         all_tables_df[table] = mysql_table_to_dataframe(table, db_connection)
@@ -55,11 +57,11 @@ def main(output_filepath):
 
     # Check if output_filepath is empty, and if not, ask user if they want to overwrite it
     if not is_path_empty(output_filepath):
-        return
-        # overwrite = input("fetch_mf_mysql: Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
-        # if overwrite != 'y':
-        #     print("Exiting without overwriting output directory.")
-        #     return
+        # return
+        overwrite = input("fetch_mf_mysql: Manufuture's raw data directory is not empty. Do you want to overwrite it? (y/n): ")
+        if overwrite != 'y':
+            print("Exiting without overwriting output directory.")
+            return
 
     for table_name, table_df in fetch_all_tables_df().items():
         if table_name in SKIPPED_RAW_MANUFUTURE_TABLES:
