@@ -1,19 +1,18 @@
 import itertools
 import json
 import logging
-
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import tensorflow as tf
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.models import load_model
 from sklearn.model_selection import train_test_split
 
 from src.utils import util_functions
-from src.utils.util_functions import get_double_feature_name, get_double_feature_value_new
 
 
 class PartPricePredictor:
@@ -22,13 +21,13 @@ class PartPricePredictor:
     _input_table_name = 'part_price_training_table_646'  # 'part_price_training_table'  # part_price_training_table_646 # part_price_training_table_496
     _training_table_name = _input_table_name + '_training'
     _is_model_trained = False
-    _last_neuron_function = 'linear'
+    _last_neuron_activation = 'linear'
     _model = None
 
     _all_part_features = [
         # ## Part features
         # 'coc'
-        # , 'first_material_categorization_level_1_set'
+        'first_material_categorization_level_1_set'
         # , 'first_material_categorization_level_2_set'
         # , 'first_material_categorization_level_3_set'
         # , 'average_number_of_nominal_sizes'
@@ -39,34 +38,7 @@ class PartPricePredictor:
         # , 'average_tolerance_0001_bucketed'
         # ,
         # 'average_tolerance'
-        'max_enclosing_cuboid_volume_bucketed'
-    ]
-
-    _selected_singles = [
-        'post_id'
-        #     # ## Part features
-        #     # 'coc'
-        #     # , 'first_material_categorization_level_1_set'
-        #     # , 'first_material_categorization_level_2_set'
-        #     # , 'first_material_categorization_level_3_set'
-        #     # , 'average_number_of_nominal_sizes'
-        #     # , 'average_number_of_nominal_sizes_bucketed'
-        #     # , 'average_tolerance_01'
-        #     # , 'average_tolerance_01_bucketed'
-        #     # , 'average_tolerance_001_bucketed'
-        #     # , 'average_tolerance_0001_bucketed'
-        #     # ,
-        #     'max_enclosing_cuboid_volume_bucketed'
-    ]
-
-    _selected_doubles = [
-        # ['post_id_manuf', 'plan']
-        # , ['post_id_manuf', 'req_sheet_metal_inserts']
-        # , ['post_id_manuf', 'req_sheet_metal']
-        # , ['post_id_manuf', 'one_manufacturer']
-        # , ['post_id_manuf', 'num_distinct_parts_binned']
-        # , ['post_id_manuf', 'total_quantity_of_parts_binned']
-        # , ['sheet_metal_weldings', 'sheet_metal_punching']
+        , 'max_enclosing_cuboid_volume_bucketed'
     ]
 
     def __init__(self, list_of_relu_layer_widths=None, all_part_features=None, model_input_columns=None,
@@ -81,17 +53,17 @@ class PartPricePredictor:
             self._model_input_columns = model_input_columns
         self._model_input_columns = None
         if all_part_features is None:
-            self._all_used_features = self._selected_singles = self._all_part_features
+            self._all_used_features = self._all_part_features
         else:
-            self._all_used_features = self._selected_singles = self._all_part_features = all_part_features
+            self._all_used_features = self._all_part_features = all_part_features
         # Feature selection
-        logging.info("Selected singles: " + str(self._selected_singles))
-        logging.info("Selected singles type: " + str(type(self._selected_singles)))
-        logging.info("selected double features: " + str(self.get_selected_double_feature_names()))
-        logging.info("selected double features type: " + str(type(self.get_selected_double_feature_names())))
-        self._all_training_features = self._selected_singles + self.get_selected_double_feature_names()
+        self._all_training_features = self._all_part_features
         # Categorical
         self._categorical_features = self._all_training_features
+        logging.info("Categorical features: " + str(self._categorical_features))
+        logging.info("All training features: " + str(self._all_training_features))
+        logging.info("All part features: " + str(self._all_part_features))
+        logging.info("All used features: " + str(self._all_used_features))
         self.model_name = self.get_model_name()
 
     def __str__(self):
@@ -101,7 +73,8 @@ class PartPricePredictor:
         return ret_str
 
     def get_model_name(self):
-        return 'model__' + str(util_functions.string_to_hex(str(self._list_of_relu_layer_widths)))
+        return 'model__' + str(util_functions.string_to_hex(str(self._list_of_relu_layer_widths))) + \
+               '__' + str(util_functions.string_to_hex(str(self._all_part_features)))
 
     def save_model(self, model_output_path):
         model_name = self.get_model_name()
@@ -127,12 +100,10 @@ class PartPricePredictor:
                            '_input_table_name': [self._input_table_name],
                            '_training_table_name': [self._training_table_name],
                            '_is_model_trained': [self._is_model_trained],
-                           '_last_neuron_function': [self._last_neuron_function],
+                           '_last_neuron_activation': [self._last_neuron_activation],
                            '_list_of_relu_layer_widths': [self._list_of_relu_layer_widths],
                            '_all_used_features': [self._all_used_features],
                            '_all_training_features': [self._all_training_features],
-                           '_selected_singles': [self._selected_singles],
-                           '_selected_doubles': [self._selected_doubles],
                            '_model_input_columns': [self._model_input_columns],
                            '_model_input_columns_and_label': [self._model_input_columns_and_label],
                            '_all_part_features': [self._all_part_features]
@@ -147,16 +118,16 @@ class PartPricePredictor:
         project_dir = Path(__file__).resolve().parents[2]
         load_path = project_dir / 'models' / model_name
         model_info_df = pd.read_parquet(load_path / 'model_info.parquet')
-        model_handler = cls(list_of_relu_layer_widths=list(model_info_df['_list_of_relu_layer_widths'][0]),
+        print(model_info_df.to_dict(orient='records'))
+        model_handler = cls(list_of_relu_layer_widths=list(model_info_df['list_of_relu_layer_widths'][0]),
                             all_part_features=list(model_info_df['_all_part_features'][0]),
                             model_input_columns_and_label=list(model_info_df['_model_input_columns_and_label'][0]))
-        # model_handler.model_inputs_and_label_columns = list(model_info_df['model_inputs_and_label_columns'][0])
+        # model_handler.model_inputs = list(model_info_df['model_inputs'][0])
         model_handler._model = load_model(load_path / (model_handler.model_name + '.keras'))
         return model_handler
 
     def _validate_configuration(self):
-        all_features_set = set(self._selected_singles).union(
-            set([single for double in self._selected_doubles for single in double]))
+        all_features_set = set(self._all_part_features)
         sym_dif = set(self._all_used_features).symmetric_difference(all_features_set)
         if len(sym_dif) > 0:
             logging.error("inconsistency in the following features : " + str(sym_dif))
@@ -183,11 +154,11 @@ class PartPricePredictor:
             if verbose:
                 print("Training data table name: " + self._training_table_name)
 
-            print("input table head")
-            print(all_tables_df[self._training_table_name].head(10))
+            print("input table head as dict")
+            print(all_tables_df[self._training_table_name].head(2).to_dict(orient='records'))
 
-            print("training table head")
-            print(all_tables_df[self._input_table_name].head(10))
+            print("training table head as dict")
+            print(all_tables_df[self._input_table_name].head(2).to_dict(orient='records'))
 
             X_train = all_tables_df[self._training_table_name].drop(columns=[self._label_column])
             y_train = all_tables_df[self._training_table_name][self._label_column]
@@ -211,10 +182,12 @@ class PartPricePredictor:
             self._model = self.build_model_instance(input_dim, list_of_relu_layer_widths)
 
             # Compile the model
-            self._model.compile(optimizer='adam',
+            self._model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
                                 loss='mean_squared_error')
             if verbose:
                 print("Model: " + str(self._model))
+            # log the columns of the model
+            logging.info("Model columns: " + str(list(X_train.columns)))
             self._model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
             self._is_model_trained = True
             if evaluate:
@@ -231,14 +204,6 @@ class PartPricePredictor:
                 # combine X_test and y_test into a single dataframe and add the predictions
                 combined = pd.concat([X_test, y_test], axis=1)
                 combined['predicted'] = predictions
-                # take self._input_table_name and left join to it the combined dataframe on the index
-                # and save the result to a csv file
-                combined = all_tables_df[self._input_table_name].join(combined, how='left', lsuffix='_left',
-                                                                      rsuffix='_right')
-
-                print("combined columns:")
-                print(list(combined.columns))
-                combined.to_csv('combined.csv', index=True)
 
                 # Visualize the distribution of the ratio
                 plt.figure(figsize=(10, 6))
@@ -249,6 +214,9 @@ class PartPricePredictor:
                 plt.show()
 
             return self._model
+
+    def get_model_input_columns_and_label(self):
+        return self._model_input_columns_and_label
 
     def evaluate_step(self, X_test, X_train, y_test, y_train):
         X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=0)
@@ -261,15 +229,6 @@ class PartPricePredictor:
         self._x_train_two_rows = X_train.head(2)
         return X_test, X_train, y_test, y_train
 
-    def get_selected_double_feature_names(self):
-        return [get_double_feature_name(column_a, column_b) for [column_a, column_b] in self._selected_doubles]
-
-    def prepare_doubles(self, raw_data):
-        for [column_a, column_b] in self._selected_doubles:
-            raw_data[get_double_feature_name(column_a, column_b)] = raw_data.apply(
-                lambda row: get_double_feature_value_new(row, column_a, column_b), axis='columns')
-        return raw_data
-
     def do_all_features_exist(self, columns):
         cols_difference_set = set(self._all_used_features).difference(set(columns))
         if len(cols_difference_set) > 0:
@@ -277,18 +236,18 @@ class PartPricePredictor:
             return False
         return True
 
-    def model_predict(self, predict_input):
-        predict_input = predict_input.astype(int)
-        logging.info("Predicting with input: " + str(predict_input))
+    def model_predict(self, prepared_row):
+        model_input = prepared_row.astype(int)
+        logging.info("Predicting with input: " + str(model_input))
         logging.info("Predicting with model: " + str(self._model))
-        return self._model.predict(predict_input, verbose=0)
+        return self._model.predict(model_input, verbose=0), model_input
 
     def build_model_instance(self, input_dim, list_of_relu_layer_widths):
         model = Sequential()
         model.add(Dense(list_of_relu_layer_widths[0], activation='relu', input_dim=input_dim))
         for layer_width in list_of_relu_layer_widths[1:]:
             model.add(Dense(layer_width, activation='relu'))
-        model.add(Dense(1, activation=self._last_neuron_function))
+        model.add(Dense(1, activation=self._last_neuron_activation))
         return model
 
     # Predict price for a single part based on its features
@@ -296,8 +255,10 @@ class PartPricePredictor:
         logging.info("Predicting part price for: " + str(part_features_dict))
         row = util_functions.dict_to_df_row(part_features_dict)
         prepared_row = self.prepare_for_fit_predict(row)
-        logging.info("equivalent of prod: " + str(prepared_row.to_dict(orient='records')) + " " + str(list(prepared_row.columns)))
-        return self.model_predict(prepared_row)
+        logging.info("equivalent of prod: " + str(prepared_row.to_dict(orient='records')) + " " + str(
+            list(prepared_row.columns)))
+        prediction, model_input = self.model_predict(prepared_row)
+        return prediction, model_input, prepared_row, row
 
     def price_predictions_for_all_feature_combinations(self, all_tables_df, csv_filename=None):
         print("Started price_predictions_for_all_feature_combinations")
@@ -311,7 +272,7 @@ class PartPricePredictor:
 
         # Predict prices for all feature combinations
         ret_df['pred_price'] = ret_df.apply(lambda row:
-                                            self.predict_part_price(util_functions.dict_to_df_row(row.to_dict())),
+                                            self.predict_part_price_in_lambda(row),
                                             axis=1)
 
         # for element in combinations:
@@ -326,11 +287,17 @@ class PartPricePredictor:
         # display a graph that shows the distribution of prices as a function of tolerance_bucketed
         # sns.scatterplot(data=ret_df, x='average_tolerance_01_bucketed', y='pred_price')
 
+    def predict_part_price_in_lambda(self, row):
+        prediction, model_input, prepared_row, row = self.predict_part_price(
+            util_functions.dict_to_df_row(row.to_dict()))
+        return prediction
+
     # Complete columns required for predicting from model (if missing then should be 0 in a 1-hot encoding)
     def complete_columns_with_negatives(self, prepared_data):
         if self._model_input_columns_and_label is not None:
             logging.info(f"New method for completing columns with negatives. Length: {len(prepared_data.columns)}")
-            return prepared_data.reindex(columns=self._model_input_columns_and_label, fill_value=False).drop(columns=[self._label_column])
+            return prepared_data.reindex(columns=self._model_input_columns_and_label, fill_value=False).drop(
+                columns=[self._label_column])
         if self._x_train_two_rows is not None:
             missing_columns = list(set(self._x_train_two_rows.columns).difference(set(prepared_data.columns)))
             missing_columns_1 = list(set(self._model_input_columns.keys()).difference(set(prepared_data.columns)))
@@ -361,7 +328,6 @@ class PartPricePredictor:
         # Feature validation
         if self.do_all_features_exist(input_table_rows_df.columns):
             ret_df = input_table_rows_df.copy()
-            ret_df = self.prepare_doubles(ret_df)
             if verbose:
                 print("Before one hot encoding: ")
                 print(len(list(ret_df.columns)))
@@ -382,6 +348,7 @@ class PartPricePredictor:
 
             # One hot encoding
             for categorical_feature in self._categorical_features:
+                logging.info("One hot encoding for: " + categorical_feature)
                 if categorical_feature in ret_df.columns:
                     ret_df = pd.concat([ret_df, pd.get_dummies(ret_df[categorical_feature],
                                                                prefix=categorical_feature)],

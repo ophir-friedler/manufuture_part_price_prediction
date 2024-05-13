@@ -6,8 +6,9 @@ import pandas as pd
 from phpserialize import dict_to_list, loads
 import math
 
-from src.data import enrichers, aggregators, validators
+from src.data import enrichers, aggregators, validators, dal
 from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER_MANUFACTURER, COUNTRY_TO_ISO_MAP
+from src.data.dal import save_all_tables_to_parquets, save_all_tables_to_database
 from src.utils.util_functions import get_all_dataframes_from_parquets, is_path_empty
 
 
@@ -25,24 +26,24 @@ def main(mf_data_filepath, mf_prices_filepath, werk_input_filepath, output_filep
         if overwrite != 'y':
             print("Exiting without overwriting output directory.")
             return
-
+    dal.prepare_mysql()
     logger = logging.getLogger(__name__)
     logger.info('fetching parquets from Manufuture and Werk')
     # Read all parquet files from path, and save them to all_tables_df
+    all_tables_df = prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath)
+    save_all_tables_to_parquets(all_tables_df, output_filepath)
+    save_all_tables_to_database(all_tables_df)
+
+
+def prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath):
     all_tables_df = get_all_dataframes_from_parquets(mf_data_filepath)
     all_tables_df.update(get_all_dataframes_from_parquets(mf_prices_filepath))
     all_tables_df.update(get_all_dataframes_from_parquets(werk_input_filepath))
     prepare_all_tidy_tables(all_tables_df)
-    save_all_tables_to_parquets(all_tables_df, output_filepath)
+    return all_tables_df
 
 
-def save_all_tables_to_parquets(all_tables_df, output_filepath):
-    # Save all tables to parquet files in output_filepath
-    for table_name, table_df in all_tables_df.items():
-        print("Writing table " + table_name + " to " + output_filepath + "/" + table_name + ".parquet")
-        # validate that output_filepath exists, and if not, create it
-        Path(output_filepath).mkdir(parents=True, exist_ok=True)
-        table_df.to_parquet(output_filepath + "/" + table_name + ".parquet")
+# TODO: write to database manufuture_rnd using dal
 
 
 def prepare_all_tidy_tables(all_tables_df):
@@ -78,19 +79,23 @@ def build_training_data_tables(all_tables_df):
 
 def build_part_price_training_table(all_tables_df):
     logging.info("Building part_price_training_table")
-    parts_with_netsuite_prices = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['Rate mean_netsuite'].notnull()]
+    parts_with_netsuite_prices = all_tables_df['wp_type_part'][
+        all_tables_df['wp_type_part']['Rate mean_netsuite'].notnull()]
     parts_with_prices_and_werk = parts_with_netsuite_prices[parts_with_netsuite_prices['found_werk'] == 1]
     # Filter out parts with volume <= 0
-    parts_with_prices_and_werk = parts_with_prices_and_werk[parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
+    parts_with_prices_and_werk = parts_with_prices_and_werk[
+        parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
     all_tables_df['part_price_training_table'] = parts_with_prices_and_werk
 
 
 def build_part_price_training_table_496(all_tables_df):
     logging.info("Building part_price_training_table_496")
-    parts_with_netsuite_prices = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['Rate (EURO) mean_netsuite_496'].notnull()]
+    parts_with_netsuite_prices = all_tables_df['wp_type_part'][
+        all_tables_df['wp_type_part']['Rate (EURO) mean_netsuite_496'].notnull()]
     parts_with_prices_and_werk = parts_with_netsuite_prices[parts_with_netsuite_prices['found_werk'] == 1]
     # Filter out parts with volume <= 0
-    parts_with_prices_and_werk = parts_with_prices_and_werk[parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
+    parts_with_prices_and_werk = parts_with_prices_and_werk[
+        parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
     all_tables_df['part_price_training_table_496'] = parts_with_prices_and_werk
 
 
@@ -103,13 +108,14 @@ def build_part_price_training_table_by_id(all_tables_df, netsuite_file_id):
         logging.error("wp_type_part_table_name " + wp_type_part_table_name + " not in all_tables_df")
         return
 
-    # print(list(all_tables_df[wp_type_part_table_name].columns))
 
     netsuite_prices_col_name = 'Rate (EURO) mean_netsuite_' + netsuite_file_id
-    parts_with_netsuite_prices = all_tables_df[wp_type_part_table_name][all_tables_df[wp_type_part_table_name][netsuite_prices_col_name].notnull()]
+    parts_with_netsuite_prices = all_tables_df[wp_type_part_table_name][
+        all_tables_df[wp_type_part_table_name][netsuite_prices_col_name].notnull()]
     parts_with_prices_and_werk = parts_with_netsuite_prices[parts_with_netsuite_prices['found_werk'] == 1]
     # Filter out parts with volume <= 0
-    parts_with_prices_and_werk = parts_with_prices_and_werk[parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
+    parts_with_prices_and_werk = parts_with_prices_and_werk[
+        parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
 
     all_tables_df[part_price_training_table_name] = parts_with_prices_and_werk
 
@@ -167,7 +173,8 @@ def pm_project_manufacturer(all_tables_df):
 
     # build Label column
     pm_df[MANUFACTURER_BID_LABEL_COLUMN_NAME] = pm_df.apply(lambda row:
-                                                            1 if row['post_id_manuf'] in row['competing_manufacturers'] else 0, axis='columns')
+                                                            1 if row['post_id_manuf'] in row[
+                                                                'competing_manufacturers'] else 0, axis='columns')
 
     # set index by project-manufacturer
     pm_df = pm_df.set_index(['post_id_project', 'post_id_manuf'])
@@ -204,7 +211,8 @@ def build_netsuite_by_memo(all_tables_df):
     netsuite_prices_df['average_Rate'] = netsuite_prices_df.groupby('Memo')['Rate'].transform('mean')
     netsuite_prices_df['min_Rate'] = netsuite_prices_df.groupby('Memo')['Rate'].transform('min')
     netsuite_prices_df['max_Rate'] = netsuite_prices_df.groupby('Memo')['Rate'].transform('max')
-    netsuite_prices_df['Currencies'] = netsuite_prices_df.groupby('Memo')[['Currency']].agg({'Currency': lambda x: ", ".join(list(x))})
+    netsuite_prices_df['Currencies'] = netsuite_prices_df.groupby('Memo')[['Currency']].agg(
+        {'Currency': lambda x: ", ".join(list(x))})
     netsuite_prices_df['num_duplicates'] = netsuite_prices_df.groupby('Memo')['Rate'].transform('count')
     all_tables_df['netsuite_prices'] = netsuite_prices_df
 
@@ -245,9 +253,10 @@ def build_netsuite_by_item_number(all_tables_df, netsuite_file_id):
     netsuite_prices_df['num_duplicates'] = netsuite_prices_df.groupby('Item Number')['Rate (EURO)'].transform('count')
     all_tables_df[netsuite_file_name] = netsuite_prices_df
 
-    netsuite_by_item_number = netsuite_prices_df.groupby('Item Number').agg({'Rate (EURO)': ['min', 'max', 'count', 'mean'],
-                                                               'Quantity': ['min', 'max']
-                                                               })
+    netsuite_by_item_number = netsuite_prices_df.groupby('Item Number').agg(
+        {'Rate (EURO)': ['min', 'max', 'count', 'mean'],
+         'Quantity': ['min', 'max']
+         })
     netsuite_by_item_number.columns = [' '.join(col).strip() for col in netsuite_by_item_number.columns.values]
     netsuite_by_item_number = netsuite_by_item_number.reset_index()
     netsuite_suffix = f'_netsuite_{netsuite_file_id}'
@@ -329,7 +338,8 @@ def clean_wp_type_agency(all_tables_df):
 
 
 def clean_wp_type_manufacturer(all_tables_df):
-    all_tables_df['wp_type_manufacturer']['cnc_turning_notes'] = all_tables_df['wp_type_manufacturer']['cnc_turning_notes'].fillna('').astype('str')
+    all_tables_df['wp_type_manufacturer']['cnc_turning_notes'] = all_tables_df['wp_type_manufacturer'][
+        'cnc_turning_notes'].fillna('').astype('str')
 
 
 def clean_wp_type_bid(all_tables_df):
@@ -337,9 +347,13 @@ def clean_wp_type_bid(all_tables_df):
 
 
 def clean_wp_type_part(all_tables_df):
-    all_tables_df['wp_type_part']['unit_price'] = all_tables_df['wp_type_part']['unit_price'].fillna(-1).replace('', -1).astype('float')
+    all_tables_df['wp_type_part']['unit_price'] = all_tables_df['wp_type_part']['unit_price'].fillna(-1).replace('',
+                                                                                                                 -1).astype(
+        'float')
     # Replace Null or empty strinc coc values with 'None'
-    all_tables_df['wp_type_part']['coc'] = all_tables_df['wp_type_part']['coc'].fillna('None').replace('', 'None').astype('str')
+    all_tables_df['wp_type_part']['coc'] = all_tables_df['wp_type_part']['coc'].fillna('None').replace('',
+                                                                                                       'None').astype(
+        'str')
     all_tables_df['wp_type_part']['quantity'] = all_tables_df['wp_type_part']['quantity'].fillna(-1).astype('int')
 
 
@@ -409,11 +423,14 @@ def clean_wp_manufacturers(all_tables_df):
         all_tables_df['wp_manufacturers'][nan_col].fillna('0', inplace=True)
     # translate vendors type to int
     all_tables_df['wp_manufacturers']['vendors'] = all_tables_df['wp_manufacturers']['vendors'].astype('int64')
-    all_tables_df['wp_manufacturers']['cnc_milling'] = all_tables_df['wp_manufacturers']['cnc_milling'].fillna(0).astype('int64')
-    all_tables_df['wp_manufacturers']['cnc_turning'] = all_tables_df['wp_manufacturers']['cnc_turning'].fillna(0).astype('int64')
+    all_tables_df['wp_manufacturers']['cnc_milling'] = all_tables_df['wp_manufacturers']['cnc_milling'].fillna(
+        0).astype('int64')
+    all_tables_df['wp_manufacturers']['cnc_turning'] = all_tables_df['wp_manufacturers']['cnc_turning'].fillna(
+        0).astype('int64')
     # set 'house' column to type str and replace NaN with empty string '' (for later use in concat)
     all_tables_df['wp_manufacturers']['house'] = all_tables_df['wp_manufacturers']['house'].fillna('').astype('str')
-    all_tables_df['wp_manufacturers']['cnc_turning_notes'] = all_tables_df['wp_manufacturers']['cnc_turning_notes'].fillna('').astype('str')
+    all_tables_df['wp_manufacturers']['cnc_turning_notes'] = all_tables_df['wp_manufacturers'][
+        'cnc_turning_notes'].fillna('').astype('str')
 
 
 if __name__ == '__main__':

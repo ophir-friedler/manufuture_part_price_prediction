@@ -16,6 +16,8 @@ from src.features.build_features import transform_to_comma_separated_str_set
 from src.utils.util_functions import is_path_empty
 
 
+#TODO: remove the main function after becomes redundant for sure
+
 @click.command()
 @click.argument('input_filepath', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
@@ -36,6 +38,10 @@ def main(input_filepath, output_filepath):
         #     print("Exiting without overwriting output directory.")
         #     return
 
+    werk_to_parquets(input_filepath, output_filepath)
+
+
+def werk_to_parquets(input_filepath, output_filepath):
     write_werk_to_parquet(input_filepath, output_filepath)
     # if output_filepath/werk.parquet does not exist, then create it
     if not os.path.exists(output_filepath + "/werk.parquet"):

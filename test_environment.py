@@ -2,7 +2,7 @@ import sys
 
 import pandas as pd
 
-from src.data.fetch_mf_mysql import get_db_connection
+from src.data.dal import get_db_connection
 
 REQUIRED_PYTHON = "python3"
 

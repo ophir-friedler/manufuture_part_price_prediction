@@ -1,3 +1,4 @@
+
 # TODO: remove pw from versioned files and use env variables
 DB_CONNECTION_STRING = "mysql+pymysql://root:mysql123@localhost/manufuture"
 SKIPPED_RAW_MANUFUTURE_TABLES = ['wp_actionscheduler_actions', 'wp_wc_order_stats']
@@ -28,5 +29,9 @@ COUNTRY_TO_ISO_MAP = {'IL': 'IL',
                       'China': 'CN',
                       'Afghanistan': 'AF',
                       'El Salvador': 'SV',
-                      'Hong Kong': 'HK'
+                      'Hong Kong': 'HK',
+                      'GB': 'GB',
+                      'RS': 'RS'
                       }
+
+TABLES_TO_SAVE_TO_DB = ['part_price_training_table', 'part_price_training_table_646']

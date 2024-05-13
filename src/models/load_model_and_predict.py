@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 from dotenv import find_dotenv, load_dotenv
 
+from src.models.config import PART_FEATURES_DICT
 from src.models.pred_part_price import PartPricePredictor
 
 
@@ -14,19 +15,21 @@ def main(model_name):
     """ Trains model based on processed data and saves to models folder.
     """
     logger = logging.getLogger(__name__)
-    logger.info(f'Starting load model and predict for model: {model_name}')
+    load_model_and_predict(model_name)
+
+
+def load_model_and_predict(model_name):
+    logging.info(f'Starting load model and predict for model: {model_name}')
     model_handler = PartPricePredictor.load_model_by_name(model_name)
-    logger.info(f'loaded model: {model_handler.get_model_name()}')
-    print(model_handler.predict_part_price(part_features_dict={'max_enclosing_cuboid_volume_bucketed': '[16384-32768)',
-                                                               'average_tolerance_01_bucketed': '[0-1)',
-                                                               'average_tolerance_001_bucketed': '[0-1)',
-                                                               'average_tolerance_0001_bucketed': '[0-1)',
-                                                               'average_number_of_nominal_sizes_bucketed': '[16-32)',
-                                                               'first_material_categorization_level_1_set': '[NONFERROUS_ALLOY]',
-                                                               'first_material_categorization_level_2_set': '[PLATINUM]',
-                                                               'quantity_bucket': '[4-5)',
-                                                               'machining_process': 'milling'}))
-    logger.info('Finished model prediction on example.')
+    logging.info(f'loaded model: {model_handler.get_model_name()}')
+    logging.info(f'Model columns and label: {model_handler.get_model_input_columns_and_label()}')
+    prediction, model_input, prepared_row, row = model_handler.predict_part_price(part_features_dict=PART_FEATURES_DICT)
+    # Translate model_input from dataframe to dictionary
+    logging.info(f'Prediction: {prediction}')
+    logging.info(f"Model input: {model_input.to_dict(orient='records')[0]}")
+    logging.info(f'Prepared row: {prepared_row}')
+    logging.info(f'Row: {row}')
+    logging.info('Finished model prediction on example.')
 
 
 if __name__ == '__main__':

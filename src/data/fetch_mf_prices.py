@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 
 import click
-import pandas as pd
 from dotenv import find_dotenv, load_dotenv
 
+from src.data.dal import prices_in_csvs_to_parquets
 from src.utils.util_functions import is_path_empty
 
 
@@ -27,18 +27,7 @@ def main(input_filepath, output_filepath):
             print("Exiting without overwriting output directory.")
             return
 
-    raw_csv_to_df = {}
-    for csv_file in Path(input_filepath).iterdir():
-        if csv_file.suffix != '.csv':
-            continue
-        table_name = csv_file.stem
-        logging.info('Reading table ' + table_name + ' from ' + str(csv_file))
-        raw_csv_to_df[table_name] = pd.read_csv(csv_file)
-
-    # Save dataframes to parquet files
-    for table_name, table_df in raw_csv_to_df.items():
-        table_df.to_parquet(output_filepath + '/' + table_name + '.parquet')
-        logger.info('Saved table ' + table_name + ' to ' + output_filepath + '/' + table_name + '.parquet')
+    prices_in_csvs_to_parquets(input_filepath, output_filepath)
 
 
 if __name__ == '__main__':

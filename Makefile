@@ -1,4 +1,4 @@
-.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model load_model_and_predict
+.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model load_model_and_predict prepare_mysql
 # sync_data_to_s3 sync_data_from_s3
 
 #################################################################################
@@ -38,8 +38,10 @@ requirements: test_environment
 
 ## Fetch Manufuture Data from MySQL
 mf_data: ## requirements
-	$(PYTHON_INTERPRETER) src/data/fetch_mf_prices.py $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
-	$(PYTHON_INTERPRETER) src/data/fetch_mf_mysql.py $(RAW_MF_DATA)
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prices_in_csvs_to_parquets --io $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
+#	$(PYTHON_INTERPRETER) src/data/fetch_mf_prices.py $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option manufuture_db_to_parquets --io none $(RAW_MF_DATA)
+#	$(PYTHON_INTERPRETER) src/data/fetch_mf_mysql.py $(RAW_MF_DATA)
 
 ## Activate python environment
 activate_env: ## requirements
@@ -48,12 +50,18 @@ activate_env: ## requirements
 
 ## Make Werk Dataset
 werk_data: ## requirements
-	$(PYTHON_INTERPRETER) src/data/make_werk_data.py $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option werk_to_parquets --io $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
+#	$(PYTHON_INTERPRETER) src/data/make_werk_data.py $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
+
+## Prepare manufuture_rnd database
+prepare_mysql: ## requirements
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prepare_mysql
 
 
 ## Prepare tidy data (handle Manufuture and Werk data if needed)
 tidy_data: mf_data werk_data
-	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(RAW_MF_PRICES) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prepare_tidy_data --mf_data_filepath $(RAW_MF_DATA) --mf_prices_filepath $(RAW_MF_PRICES) --werk_input_filepath $(INTERIM_WERK_DATA) --output_filepath $(PROCESSED_DATA)
+#	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(RAW_MF_PRICES) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
 
 
 ## Run jupyter notebook server
@@ -64,10 +72,18 @@ notebook: ## requirements
 train_model: tidy_data
 	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
 
+only_train_model:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option new_flow --model_output_filepath models
+#	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py --option new_flow $(PROCESSED_DATA) models
 
 ## Load model and predict: make load_model_and_predict MODEL_NAME=model__[100, 50, 20, 10]__T__part_price_training_table_646_training
 load_model_and_predict:
-	$(PYTHON_INTERPRETER) src/models/load_model_and_predict.py  --model_name $(MODEL_NAME)
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_predict --model_name $(MODEL_NAME)
+#	$(PYTHON_INTERPRETER) src/models/load_model_and_predict.py  --model_name $(MODEL_NAME)
+
+drop_all_models:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option drop_all_models
+#	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py --option drop_all_models $(PROCESSED_DATA) models
 
 ## Delete all compiled Python files, and all parquet files
 clean:

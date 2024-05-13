@@ -7,6 +7,8 @@ import logging
 from src.data.validators import validate_existence
 from src.utils.util_functions import parse_list_of_integers, transform_to_comma_separated_str_set, bin_feature
 from src.data.config import PRICE_BUCKETS
+from src.models.config import MAX_ENCLOSING_CUBOID_VOLUMNE_NUM_EXPONENTIAL_BUCKETS, \
+    AVERAGE_TOLERANCE_01_BUCKETED_EXPONENTIAL_BUCKETS
 from src.utils import util_functions
 
 
@@ -18,6 +20,8 @@ from src.utils import util_functions
 # is_bid_chosen: boolean - is a bid selected by the customer
 # competing_manufacturers: Competing manufacturers
 # winning_manufacturers: Winning manufacturers
+
+
 def enrich_wp_type_quote(all_tables_df):
     logging.info("Enriching wp_type_quote with: competing_manufacturers, num_candidates, is_bid_chosen ")
 
@@ -282,7 +286,7 @@ def get_average_tolerance_01_bucketed(werk_data_for_name_df):
         return None
     if 'tolerance_01' in werk_data_for_name_df.columns:
         return bin_feature(werk_data_for_name_df['tolerance_01'].mean(),
-                           exponential_bins(10))
+                           exponential_bins(AVERAGE_TOLERANCE_01_BUCKETED_EXPONENTIAL_BUCKETS))
     else:
         return None
 
@@ -364,14 +368,14 @@ def calculate_werk_data_for_part(row, werk_by_name_df):
 
 def get_max_enclosing_cuboid_volume_bucketed(werk_data_for_name_df):
     if len(werk_data_for_name_df) == 0 or ('enclosing_cuboid_volumes_set' not in werk_data_for_name_df.columns):
-        return bin_feature(0, exponential_bins(25))
+        return bin_feature(0, exponential_bins(MAX_ENCLOSING_CUBOID_VOLUMNE_NUM_EXPONENTIAL_BUCKETS))
     try:
         ret_val = werk_data_for_name_df['enclosing_cuboid_volumes_set'].apply(
             lambda x: max(util_functions.convert_str_set_to_float_set(x), default=0))
         if len(ret_val) == 0:
             logging.error("ret_val is empty" + werk_data_for_name_df['enclosing_cuboid_volumes_set'])
             raise ValueError
-        return bin_feature(ret_val.max(), exponential_bins(25))
+        return bin_feature(ret_val.max(), exponential_bins(MAX_ENCLOSING_CUBOID_VOLUMNE_NUM_EXPONENTIAL_BUCKETS))
     except ValueError:
         logging.error(werk_data_for_name_df['enclosing_cuboid_volumes_set'])
 

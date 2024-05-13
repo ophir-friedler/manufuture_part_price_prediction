@@ -2,36 +2,9 @@ import click
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
-from sqlalchemy import create_engine
-import pandas as pd
 
-from src.data.config import DB_CONNECTION_STRING, SKIPPED_RAW_MANUFUTURE_TABLES
+from src.data.dal import manufuture_db_to_parquets
 from src.utils.util_functions import is_path_empty
-
-
-def get_db_connection():
-    sql_engine = create_engine(DB_CONNECTION_STRING)  # , pool_recycle=3600
-    db_connection = sql_engine.connect()
-    return db_connection
-
-
-def mysql_table_to_dataframe(table_name, db_connection) -> pd.DataFrame:
-    return pd.read_sql(f'SELECT * FROM `' + table_name + '`', db_connection)
-
-
-# Load MySQL DB to all_tables_df
-def fetch_all_tables_df():
-    logging.info('fetching raw data from Manufuture MySQL database')
-    db_connection = get_db_connection()
-    all_table_names = pd.read_sql(f'SHOW TABLES', db_connection)['Tables_in_manufuture']
-    # logging.info('Tables in Manufuture MySQL database: ' + str(all_table_names))
-    all_tables_df = {}
-    for table in all_table_names:
-        all_tables_df[table] = mysql_table_to_dataframe(table, db_connection)
-
-    # Load e-mail logs to all_tables_df['email_logs']:
-    # all_tables_df['email_logs'] = pd.read_csv(EMAIL_LOGS_DIR)
-    return all_tables_df
 
 
 def clean_table_and_save(table_name, table_df):
@@ -63,16 +36,7 @@ def main(output_filepath):
             print("Exiting without overwriting output directory.")
             return
 
-    for table_name, table_df in fetch_all_tables_df().items():
-        if table_name in SKIPPED_RAW_MANUFUTURE_TABLES:
-            continue
-        if table_name == 'wp_posts':
-            table_df['post_date_gmt'] = table_df['post_date_gmt'].replace('0000-00-00 00:00:00', None)
-            table_df['post_modified_gmt'] = table_df['post_modified_gmt'].replace('0000-00-00 00:00:00', None)
-        print("Writing table " + table_name + " to " + output_filepath + "/" + table_name + ".parquet")
-        # validate that output_filepath exists, and if not, create it
-        Path(output_filepath).mkdir(parents=True, exist_ok=True)
-        table_df.to_parquet(output_filepath + "/" + table_name + ".parquet")
+    manufuture_db_to_parquets(output_filepath)
 
 
 if __name__ == '__main__':
