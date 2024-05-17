@@ -16,9 +16,9 @@ from src.utils import util_functions
 
 
 class PartPricePredictor:
-    _label_column = 'unit_price'  # 'Rate (EURO) mean_netsuite_646'  # 'Rate mean_netsuite'  # 'Rate (EURO) mean_netsuite_646',  'Rate (EURO) mean_netsuite_496'
+    _label_column = 'unit_price'
     _categorical_features = None
-    _input_table_name = 'part_price_training_table_646'  # 'part_price_training_table'  # part_price_training_table_646 # part_price_training_table_496
+    _input_table_name = 'part_price_training_table_646'
     _training_table_name = _input_table_name + '_training'
     _is_model_trained = False
     _last_neuron_activation = 'linear'
@@ -26,10 +26,10 @@ class PartPricePredictor:
 
     _all_part_features = [
         # ## Part features
+        'first_material_category_level_1_set',
         # 'coc'
-        'first_material_categorization_level_1_set'
-        # , 'first_material_categorization_level_2_set'
-        # , 'first_material_categorization_level_3_set'
+        # , 'first_material_category_level_2_set'
+        # , 'first_material_category_level_3_set'
         # , 'average_number_of_nominal_sizes'
         # , 'average_number_of_nominal_sizes_bucketed'
         # , 'average_tolerance_01'
@@ -38,7 +38,7 @@ class PartPricePredictor:
         # , 'average_tolerance_0001_bucketed'
         # ,
         # 'average_tolerance'
-        , 'max_enclosing_cuboid_volume_bucketed'
+        'max_enclosing_cuboid_volume_bucketed'
     ]
 
     def __init__(self, list_of_relu_layer_widths=None, all_part_features=None, model_input_columns=None,

@@ -21,7 +21,7 @@ def main(option, input_filepath, model_output_filepath):
     if option == 'default':
         logger.info('Running default option - which does nothing')
         train_model_and_save(input_filepath, logger, model_output_filepath)
-    if option == 'new_flow':
+    if option == 'train_model_and_save':
         model_handler = ModelHandler.get_trained_model(list_of_relu_layer_widths=LIST_OF_RELU_LAYER_WIDTHS,
                                                        target_column_name='unit_price',
                                                        last_neuron_activation='linear',
@@ -78,5 +78,3 @@ if __name__ == '__main__':
     load_dotenv(find_dotenv())
 
     main()
-
-

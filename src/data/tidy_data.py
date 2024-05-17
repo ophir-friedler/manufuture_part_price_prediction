@@ -1,38 +1,12 @@
-import click
 import logging
-from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
-import pandas as pd
-from phpserialize import dict_to_list, loads
 import math
 
-from src.data import enrichers, aggregators, validators, dal
+import pandas as pd
+from phpserialize import dict_to_list, loads
+
+from src.data import enrichers, aggregators, validators
 from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER_MANUFACTURER, COUNTRY_TO_ISO_MAP
-from src.data.dal import save_all_tables_to_parquets, save_all_tables_to_database
-from src.utils.util_functions import get_all_dataframes_from_parquets, is_path_empty
-
-
-@click.command()
-@click.argument('mf_data_filepath', type=click.Path(exists=True))
-@click.argument('mf_prices_filepath', type=click.Path(exists=True))
-@click.argument('werk_input_filepath', type=click.Path(exists=True))
-@click.argument('output_filepath', type=click.Path())
-def main(mf_data_filepath, mf_prices_filepath, werk_input_filepath, output_filepath):
-    """ Reads Manufuture and Werk data from parquet files, tidies it, and saves it to output_filepath as parquet files
-    """
-    if not is_path_empty(output_filepath):
-        # return
-        overwrite = input("tidy_data: The processed data directory is not empty. Do you want to overwrite it? (y/n): ")
-        if overwrite != 'y':
-            print("Exiting without overwriting output directory.")
-            return
-    dal.prepare_mysql()
-    logger = logging.getLogger(__name__)
-    logger.info('fetching parquets from Manufuture and Werk')
-    # Read all parquet files from path, and save them to all_tables_df
-    all_tables_df = prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath)
-    save_all_tables_to_parquets(all_tables_df, output_filepath)
-    save_all_tables_to_database(all_tables_df)
+from src.utils.util_functions import get_all_dataframes_from_parquets
 
 
 def prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath):
@@ -44,8 +18,6 @@ def prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath)
 
 
 # TODO: write to database manufuture_rnd using dal
-
-
 def prepare_all_tidy_tables(all_tables_df):
     clean_wp_manufacturers(all_tables_df)
     clean_wp_parts(all_tables_df)
@@ -107,7 +79,6 @@ def build_part_price_training_table_by_id(all_tables_df, netsuite_file_id):
     if wp_type_part_table_name not in all_tables_df.keys():
         logging.error("wp_type_part_table_name " + wp_type_part_table_name + " not in all_tables_df")
         return
-
 
     netsuite_prices_col_name = 'Rate (EURO) mean_netsuite_' + netsuite_file_id
     parts_with_netsuite_prices = all_tables_df[wp_type_part_table_name][
@@ -432,16 +403,3 @@ def clean_wp_manufacturers(all_tables_df):
     all_tables_df['wp_manufacturers']['cnc_turning_notes'] = all_tables_df['wp_manufacturers'][
         'cnc_turning_notes'].fillna('').astype('str')
 
-
-if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
-
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
-
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
-
-    main()

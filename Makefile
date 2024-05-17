@@ -1,5 +1,4 @@
-.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model load_model_and_predict prepare_mysql
-# sync_data_to_s3 sync_data_from_s3
+.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict prepare_mysql
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -39,9 +38,8 @@ requirements: test_environment
 ## Fetch Manufuture Data from MySQL
 mf_data: ## requirements
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prices_in_csvs_to_parquets --io $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
-#	$(PYTHON_INTERPRETER) src/data/fetch_mf_prices.py $(EXTERNAL_MF_DATA) $(RAW_MF_PRICES)
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option manufuture_db_to_parquets --io none $(RAW_MF_DATA)
-#	$(PYTHON_INTERPRETER) src/data/fetch_mf_mysql.py $(RAW_MF_DATA)
+
 
 ## Activate python environment
 activate_env: ## requirements
@@ -49,9 +47,8 @@ activate_env: ## requirements
 
 
 ## Make Werk Dataset
-werk_data: ## requirements
-	$(PYTHON_INTERPRETER) src/data/entry_point.py --option werk_to_parquets --io $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
-#	$(PYTHON_INTERPRETER) src/data/make_werk_data.py $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
+process_werk_data: ## requirements
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option process_werk_data --io $(EXTERNAL_WERK_DATA) $(INTERIM_WERK_DATA)
 
 ## Prepare manufuture_rnd database
 prepare_mysql: ## requirements
@@ -59,9 +56,8 @@ prepare_mysql: ## requirements
 
 
 ## Prepare tidy data (handle Manufuture and Werk data if needed)
-tidy_data: mf_data werk_data
+tidy_data: werk_data process_werk_data mf_data
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prepare_tidy_data --mf_data_filepath $(RAW_MF_DATA) --mf_prices_filepath $(RAW_MF_PRICES) --werk_input_filepath $(INTERIM_WERK_DATA) --output_filepath $(PROCESSED_DATA)
-#	$(PYTHON_INTERPRETER) src/data/tidy_data.py $(RAW_MF_DATA) $(RAW_MF_PRICES) $(INTERIM_WERK_DATA) $(PROCESSED_DATA)
 
 
 ## Run jupyter notebook server
@@ -69,29 +65,41 @@ notebook: ## requirements
 	jupyter notebook
 
 ## Train pricing model on processed data and save it to models
-train_model: tidy_data
+train_model_old: tidy_data
 	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
 
-only_train_model:
-	$(PYTHON_INTERPRETER) src/data/entry_point.py --option new_flow --model_output_filepath models
-#	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py --option new_flow $(PROCESSED_DATA) models
+## Train a model and save it to models
+train_model:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option train_model_and_save --model_output_filepath models
+
+## Evaluate model: make evaluate_model MODEL_NAME=MA_128_64_32_MIH_0x576d7_TH_0x432_E_10_BS_32_LR_0.01
+evaluate_model:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option evaluate_model --model_name $(MODEL_NAME)
+
+## Evaluate model: make show_model_details MODEL_NAME=MA_128_64_32_MIH_0x576d7_TH_0x432_E_10_BS_32_LR_0.01
+show_model_details:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option show_model_details --model_name $(MODEL_NAME)
 
 ## Load model and predict: make load_model_and_predict MODEL_NAME=model__[100, 50, 20, 10]__T__part_price_training_table_646_training
 load_model_and_predict:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_predict --model_name $(MODEL_NAME)
-#	$(PYTHON_INTERPRETER) src/models/load_model_and_predict.py  --model_name $(MODEL_NAME)
+
+## Load model and predict on raw werk: make load_model_and_predict_on_raw MODEL_NAME=MA_128_64_32_MIH_0x576d7_TH_0x432_E_10_BS_32_LR_0.01
+load_model_and_predict_on_raw:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_predict_on_raw --model_name $(MODEL_NAME)
 
 drop_all_models:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option drop_all_models
-#	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py --option drop_all_models $(PROCESSED_DATA) models
 
 ## Delete all compiled Python files, and all parquet files
-clean:
+clean: drop_all_models
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 	find data/processed -type f -name "*.parquet" -delete
 	find data/interim -type f -name "*.parquet" -delete
 	find data/raw -type f -name "*.parquet" -delete
+	find data/raw/mf_data -type f -name "*.parquet" -delete
+	find data/raw/mf_prices -type f -name "*.parquet" -delete
 
 
 

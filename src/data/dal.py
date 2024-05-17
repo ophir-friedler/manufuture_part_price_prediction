@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 
 from src.config import DB_STRUCTURE, DB_NAME, READ_ONLY_DB_NAME
 from src.data import data_validation
-from src.data.config import DB_CONNECTION_STRING, SKIPPED_RAW_MANUFUTURE_TABLES, TABLES_TO_SAVE_TO_DB
+from src.data.config import SKIPPED_RAW_MANUFUTURE_TABLES, TABLES_TO_SAVE_TO_DB
 
 
 def connect(database_name=None, verbose=False):
@@ -35,12 +35,6 @@ def _get_sql_engine(database_name=DB_NAME):
     db_connection_string = f"mysql+pymysql://root:{mysql_pw}@localhost/" + database_name
     sql_engine = create_engine(db_connection_string)  # , pool_recycle=3600
     return db_connection_string, sql_engine
-
-
-def get_db_connection():
-    sql_engine = create_engine(DB_CONNECTION_STRING)  # , pool_recycle=3600
-    db_connection = sql_engine.connect()
-    return db_connection
 
 
 def read_query(query_str: str, database_name=DB_NAME) -> pd.DataFrame:
@@ -374,7 +368,7 @@ def fetch_all_tables_df():
 
 
 def mysql_table_to_dataframe(table_name, db_connection) -> pd.DataFrame:
-    return pd.read_sql(f'SELECT * FROM `' + table_name + '`', db_connection)
+    return pd.read_sql('SELECT * FROM `' + table_name + '`', db_connection)
 
 
 def prices_in_csvs_to_parquets(input_filepath, output_filepath):
@@ -421,6 +415,9 @@ def save_all_tables_to_database(all_tables_df):
             logging.info("Writing table " + table_name + " to database")
             # logging.info("table_df columns: " + str(list(table_df.columns)))
             # logging.info("table_df column types: " + str(list(table_df.dtypes)))
-            table_df_to_save = table_df[DB_STRUCTURE['tables'][table_name]['columns'].keys()]
-            dal.append_dataframe_to_table(table_name=table_name,
-                                          table_df=table_df_to_save)
+            if table_name in DB_STRUCTURE['tables']:
+                table_df_to_save = table_df[DB_STRUCTURE['tables'][table_name]['columns'].keys()]
+            else:
+                table_df_to_save = table_df
+            dataframe_to_table(table_name=table_name,
+                               table_df=table_df_to_save)

@@ -3,12 +3,16 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from keras import Sequential, optimizers
 from keras.models import load_model
 from keras.src.layers import Dense
 
 from src.config import LABEL_FEATURE
 from src.data import dal
+from src.data.enrichers import get_first_material_category_level_1_set
+from src.features.build_features import transform_to_comma_separated_str_set
 from src.utils import util_functions
 
 
@@ -35,6 +39,7 @@ class ModelHandler:
                  ):
         self.model = None
         self.model_inputs = None
+        self.model_info_df = None
 
         self.list_of_relu_layer_widths = list_of_relu_layer_widths
         self.categorical_features_dict = categorical_features_dict
@@ -119,6 +124,7 @@ class ModelHandler:
                             target_column_name=model_info_df['target_column_name'][0])
         model_handler.model_inputs = list(model_info_df['model_inputs'][0])
         model_handler.model_name = model_info_df['model_name'][0]
+        model_handler.model_info_df = model_info_df
         model_handler.model = load_model(load_path / (model_handler.model_name + '.keras'))
         return model_handler
 
@@ -132,6 +138,34 @@ class ModelHandler:
             logging.info('Model ' + model_name + ' deleted.')
         else:
             logging.warning('Model ' + model_name + ' does not exist.')
+
+    def evaluate_model(self, evaluation_table_name):
+        evaluation_df = self.prepare_data_from_training_table(training_table_name=evaluation_table_name)
+        X_test = evaluation_df.drop(columns=[LABEL_FEATURE])
+        y_test = evaluation_df[LABEL_FEATURE]
+        self.model.evaluate(X_test, y_test, verbose=2)
+        predictions = self.model.predict(X_test)
+        ratio = y_test / predictions.flatten()
+        ratio = ratio.apply(lambda x: max(x, 1 / x))
+        ratio = ratio.apply(lambda x: 10 if x > 10 else x)
+        combined = pd.concat([X_test, y_test], axis=1)
+        combined['predicted'] = predictions
+
+        # Visualize the distribution of the predicted prices
+        plt.figure(figsize=(10, 6))
+        sns.histplot(combined['predicted'], bins=100, kde=True)
+        plt.title('Distribution of Predicted Prices')
+        plt.xlabel('Price')
+        plt.ylabel('Frequency')
+        plt.show()
+
+        # Visualize the distribution of the ratio
+        plt.figure(figsize=(10, 6))
+        sns.histplot(ratio, bins=100, kde=True)
+        plt.title('Distribution of Ratio (Actual price / Predicted price)')
+        plt.xlabel('Ratio')
+        plt.ylabel('Frequency')
+        plt.show()
 
     def save_model(self):
         project_dir = Path(__file__).resolve().parents[2]
@@ -195,7 +229,7 @@ class ModelHandler:
 
     def fit_on_prepared_data(self, prepared_data):
         if len(prepared_data) == 0:
-            logging.warning(f'No data to train on. Skipping training.')
+            logging.warning('No data to train on. Skipping training.')
             return 'no_data'
         try:
             self.model.fit(prepared_data.drop(columns=[LABEL_FEATURE]),
@@ -215,14 +249,11 @@ class ModelHandler:
                                                                   target_column_name=self.target_column_name,
                                                                   verbose=verbose)
         if verbose:
-            report_str = f" first line"
-            report_str += f", second line"
+            report_str = " first line"
+            report_str += ", second line"
             logging.info(report_str)
         expanded_training_data_df = expand_context_target_data(context_target_data_df=context_target_data_df,
                                                                categorical_features=features)
-        # report_str = f" min date: {ret_val['date'].min()}"
-        # report_str += f", max date (included): {ret_val['date'].max()} after categorical expansion"
-        # logging.info(report_str) if verbose else None
         prepared_data = self.prepare_expanded_data(expanded_data=expanded_training_data_df)
         return prepared_data
 
@@ -242,26 +273,11 @@ class ModelHandler:
         model_input = prepared_row.drop(columns=[LABEL_FEATURE])
         return self.model.predict(model_input, verbose=0), model_input
 
-    def predict_on_date(self, date, expanded_data_on_date=None, verbose=False):
-        if expanded_data_on_date is None or expanded_data_on_date.empty:
-            expanded_data_on_date = get_expanded_for_prediction_data(
-                categorical_features=list(self.categorical_features_dict.keys()),
-                date=date,
-                verbose=verbose)
-        return self.predict_on_and_augment_expanded_data(expanded_data_on_date)
+    def predict_on_werk_raw_data(self, werk_raw_dict):
+        return self.predict_part_price(convert_werk_raw_to_categorical_features_dict(werk_raw_dict))
 
     def predict_on_prepared_data(self, prepared_data):
         return self.model.predict(prepared_data.drop(columns=[LABEL_FEATURE]))
-
-    def predict_on_and_augment_expanded_data(self, expanded_on_date):
-        prepared_data_on_date = self.prepare_expanded_data(expanded_on_date)
-        predictions_on_date = self.predict_on_prepared_data(prepared_data_on_date)
-        ret_df_on_date = expanded_on_date.assign(predictions=predictions_on_date)
-        ret_df_on_date = ret_df_on_date.sort_values(by='predictions', ascending=False)
-
-        # print(ret_df_on_date[['ticker', 'predictions']])
-        # print(ret_df[['ticker', 'predictions']])
-        return ret_df_on_date  # , prepared_data_on_date
 
     def prepare_expanded_data(self, expanded_data):
         # TODO: instead of fill_value=False, create a 'dont know' feature value for each categorical feature
@@ -271,6 +287,10 @@ class ModelHandler:
             'bool')
         # only_training_columns_df.loc[:, self.model_inputs] = only_training_columns_df.loc[:, self.model_inputs].astype(int)
         return only_training_columns_df
+
+    def show_model_details(self):
+        print("\nModel features: \n" + str(list(self.categorical_features_dict.keys())))
+        print("\n\nModel info: \n " + str(self.model_info_df.to_dict(orient='records')))
 
 
 def string_to_hex(string):
@@ -312,46 +332,10 @@ def drop_all_models():
     logging.info('All models dropped')
 
 
-def get_expanded_for_prediction_data(categorical_features, date, verbose=False):
-    input_format_df = build_context_target_at_date(categorical_features=categorical_features,
-                                                   date=date,
-                                                   verbose=verbose)
-    return expand_context_target_data(context_target_data_df=input_format_df,
-                                      categorical_features=categorical_features)
-
-
-# TODO: write for pricing
-def build_context_target_at_date(categorical_features, date, verbose=False):
-    logging.info(f'Building context_target at Date: {date}') if verbose else None
-    context_target_df = data_utils.calculate_context_target_data_at_date_direct(categorical_features,
-                                                                                date,
-                                                                                verbose)
-    if verbose:
-        report_str = f" min date: {context_target_df['date'].min()}"
-        report_str += f", max date (included): {context_target_df['date'].max()} "
-        report_str += f" max prev date: {context_target_df['prev_day_date'].max()}"
-        report_str += f", min prev date: {context_target_df['prev_day_date'].min()}"
-        logging.info(report_str)
-    return data_utils.expand_boolean_events(context_target_df, categorical_features)
-
-
-def delete_raw_data_of_bad_models(eval_name):
-    if dal.table_exists(database_name=FINANCIAL_ANALYSIS_DB_NAME,
-                        table_name=WHOLE_MODEL_EVALUATION_STATS_TABLE_NAME):
-        model_to_eval_df = dal.read_query(
-            f"SELECT DISTINCT model_name, {eval_name} FROM {WHOLE_MODEL_EVALUATION_STATS_TABLE_NAME}")
-        if len(model_to_eval_df) > MAX_NUM_OF_MODELS_SAVE_RAW_DATA:
-            logging.info(f'Deleting data for {len(model_to_eval_df) - MAX_NUM_OF_MODELS_SAVE_RAW_DATA} models')
-            models_sorted_by_eval = model_to_eval_df.sort_values(by=eval_name, ascending=True)['model_name'].to_list()
-            for model_name in models_sorted_by_eval[:len(model_to_eval_df) - MAX_NUM_OF_MODELS_SAVE_RAW_DATA]:
-                clean_away_model_by_name(model_name=model_name, verbose=False)
-
-
 def clean_away_model_by_name(model_name, verbose=False):
     if model_exists(model_name):
         logging.info(f'Deleting model {model_name}')
         ModelHandler.delete_model_by_name(model_name)
-        data_utils.delete_raw_data_by_model_name(model_name)
     else:
         logging.warning(f'Model {model_name} does not exist. Skipping deletion.') if verbose else None
 
@@ -378,11 +362,6 @@ def build_context_target_data_direct(training_table_name, categorical_features, 
     query += f"""
         FROM {training_table_name}
     """
-    # query += f"""
-    #     WHERE cur_day_dod_history.date >= '{start_date}'
-    #     AND cur_day_dod_history.date < '{end_date}'
-    #     AND cur_day_dod_history.ticker IN {tuple(tickers_list)}
-    # """
     logging.info("Query: " + query) if verbose else None
     return dal.read_query(query_str=query)
 
@@ -393,3 +372,26 @@ def expand_context_target_data(context_target_data_df, categorical_features):
         df_expanded.columns = [f"{cat_feature}_{col}" for col in df_expanded.columns]
         context_target_data_df = pd.concat([context_target_data_df, df_expanded], axis=1)
     return context_target_data_df
+
+
+def convert_werk_raw_to_categorical_features_dict(werk_raw_dict):
+    werk_dict = {'name': werk_raw_dict['name']}
+    title_block = werk_raw_dict['title_block']
+    if title_block is None or title_block['material'] is None or title_block['material']['material_category'] is None:
+        werk_dict['material_category_level_1'] = []
+        werk_dict['material_category_level_2'] = []
+        werk_dict['material_category_level_3'] = []
+    else:
+        werk_dict['material_category_level_1'] = [title_block['material']['material_category'][0]]
+        werk_dict['material_category_level_2'] = [title_block['material']['material_category'][1]]
+        werk_dict['material_category_level_3'] = [title_block['material']['material_category'][2]]
+    werk_df = pd.DataFrame(werk_dict)
+    werk_by_name_df = werk_df.groupby('name').agg(
+        material_category_level_1_set=('material_category_level_1', lambda x: transform_to_comma_separated_str_set(x)),
+        material_category_level_2_set=('material_category_level_2', lambda x: transform_to_comma_separated_str_set(x)),
+        material_category_level_3_set=('material_category_level_3', lambda x: transform_to_comma_separated_str_set(x)))
+    ret_ser = pd.Series({'num_werk_results': len(werk_by_name_df),
+                         'first_material_category_level_1_set': get_first_material_category_level_1_set(werk_by_name_df)
+                         })
+    logging.info(f"Converted werk raw to categorical features dict: {ret_ser.to_dict()}")
+    return ret_ser.to_dict()

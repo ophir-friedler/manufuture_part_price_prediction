@@ -1,15 +1,11 @@
 import logging
-import math
 import os
 from pathlib import Path
 
 import pandas as pd
+from IPython.core.display_functions import display
 
 TABLES_TO_IGNORE_IN_SEARCH = ['wp_quotes', 'pm_project_manufacturer', 'pam_project_active_manufacturer_th_1']
-
-
-def selectAll(table_name, dbConnection):
-    return pd.read_sql(f'SELECT * FROM ' + table_name, dbConnection)
 
 
 def display_and_return_is_empty(ret_df, print_str):
@@ -128,14 +124,6 @@ def add_date_time_columns(row, columns_prefix, datetime_column):
         row[columns_prefix + '_year_month'] = (str(row[columns_prefix + '_year']) + "-" + str(row[columns_prefix + '_month']))
         row[columns_prefix + '_Ym'] = pd.to_datetime(row[columns_prefix + '_year_month'], format='%Y-%m').strftime('%Y-%m')
     return row
-
-
-def transform_to_comma_separated_str_set(x):
-    # if x is None or x is Nan or x is empty list, return None
-    if x is None or (isinstance(x, float) and math.isnan(x)) or (isinstance(x, list) and len(x) == 0):
-        return None
-    ret_val = ", ".join([str(y) for y in set([y for y in list(x) if y is not None and not (isinstance(y, float) and math.isnan(y))])])
-    return "[" + ret_val + "]"
 
 
 def bin_feature(feature_value, bins_arr):

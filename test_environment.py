@@ -2,7 +2,7 @@ import sys
 
 import pandas as pd
 
-from src.data.dal import get_db_connection
+from src.data.dal import _get_sql_engine
 
 REQUIRED_PYTHON = "python3"
 
@@ -24,7 +24,7 @@ def main():
     else:
         print(">>> Development environment passes basic tests!")
 
-    db_connection = get_db_connection()
+    db_connection = _get_sql_engine().connect()
     if db_connection is not None:
         print(">>> MySQL connection established!")
     all_table_names = pd.read_sql(f'SHOW TABLES', db_connection)['Tables_in_manufuture']
