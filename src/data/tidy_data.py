@@ -3,8 +3,9 @@ import math
 
 import pandas as pd
 from phpserialize import dict_to_list, loads
+from sklearn.model_selection import train_test_split
 
-from src.data import enrichers, aggregators, validators
+from src.data import enrichers, aggregators, validators, dal
 from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER_MANUFACTURER, COUNTRY_TO_ISO_MAP
 from src.utils.util_functions import get_all_dataframes_from_parquets
 
@@ -47,17 +48,15 @@ def build_training_data_tables(all_tables_df):
     build_part_price_training_table_496(all_tables_df)
     # build_part_price_training_table_by_id(all_tables_df, '496')
     build_part_price_training_table_by_id(all_tables_df, '646')
+    build_part_price_train_test_tables()
 
 
 def build_part_price_training_table(all_tables_df):
     logging.info("Building part_price_training_table")
-    parts_with_netsuite_prices = all_tables_df['wp_type_part'][
-        all_tables_df['wp_type_part']['Rate mean_netsuite'].notnull()]
-    parts_with_prices_and_werk = parts_with_netsuite_prices[parts_with_netsuite_prices['found_werk'] == 1]
-    # Filter out parts with volume <= 0
-    parts_with_prices_and_werk = parts_with_prices_and_werk[
-        parts_with_prices_and_werk['max_enclosing_cuboid_volume'] > 0]
-    all_tables_df['part_price_training_table'] = parts_with_prices_and_werk
+    # parts_with_netsuite_prices = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['Rate mean_netsuite'].notnull()]
+    df = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['found_werk'] == 1]  # with werk prices
+    df = df[df['max_enclosing_cuboid_volume'] > 0]  # Filter out parts with volume <= 0
+    all_tables_df['part_price_training_table'] = df
 
 
 def build_part_price_training_table_496(all_tables_df):
@@ -403,3 +402,11 @@ def clean_wp_manufacturers(all_tables_df):
     all_tables_df['wp_manufacturers']['cnc_turning_notes'] = all_tables_df['wp_manufacturers'][
         'cnc_turning_notes'].fillna('').astype('str')
 
+
+def build_part_price_train_test_tables():
+    training_table_df = dal.read_table_into_dataframe('part_price_training_table')
+    train_df, test_df = train_test_split(training_table_df, test_size=0.2, random_state=42)
+    dal.dataframe_to_table(table_name='part_price_training_table_80',
+                           table_df=train_df)
+    dal.dataframe_to_table(table_name='part_price_training_table_20',
+                           table_df=test_df)

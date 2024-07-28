@@ -166,50 +166,35 @@ def get_all_dataframes_from_parquets(path):
     return all_tables_df
 
 
-def get_all_dataframes_in_data_dirs():
-    return get_all_dataframes_from_parquets(os.environ.get("PYTHONPATH") + '/data')
-
-
-def is_path_empty(path):
-    if not Path(path).exists():
-        return False
-    # Check if output_filepath is empty, and if not, ask user if they want to overwrite it.
-    files_list = list(Path(path).iterdir())
-    # Ignore .gitkeep and .DS_Store files
-    files_list = [file for file in files_list if file.name not in ['.gitkeep', '.DS_Store']]
-    if len(files_list) > 0:
-        return False
-    return True
-
-
-def string_to_hex(string):
-    # Initialize sum to 0
-    total_sum = 0
-
-    # Iterate over each character in the string
-    for char in string:
-        # Convert the character to its binary representation
-        binary_value = bin(ord(char))[2:]
-
-        # Convert binary value to integer and add to the total sum
-        total_sum += int(binary_value, 2)
-
-    # Convert total sum to hexadecimal and return
-    return hex(total_sum)
-
-
-def dict_to_df_row(dict_):
-    return pd.DataFrame({k: [v] for k, v in dict_.items()})
-
-
-def get_double_feature_name(column_a, column_b):
-    return column_a + "__" + column_b
-
-
-def get_double_feature_value(df, column_a, column_b):
-    return df[column_a].astype("string") + "_" + \
-           df[column_b].astype("string")
-
-
-def get_double_feature_value_new(ser, column_a, column_b):
-    return str(ser[column_a]) + "_" + str(ser[column_b])
+# def dict_to_df_row(dict_):
+#     return pd.DataFrame({k: [v] for k, v in dict_.items()})
+#
+# def get_all_dataframes_in_data_dirs():
+#     return get_all_dataframes_from_parquets(os.environ.get("PYTHONPATH") + '/data')
+#
+# def is_path_empty(path):
+#     if not Path(path).exists():
+#         return False
+#     # Check if output_filepath is empty, and if not, ask user if they want to overwrite it.
+#     files_list = list(Path(path).iterdir())
+#     # Ignore .gitkeep and .DS_Store files
+#     files_list = [file for file in files_list if file.name not in ['.gitkeep', '.DS_Store']]
+#     if len(files_list) > 0:
+#         return False
+#     return True
+#
+#
+# def string_to_hex(string):
+#     # Initialize sum to 0
+#     total_sum = 0
+#
+#     # Iterate over each character in the string
+#     for char in string:
+#         # Convert the character to its binary representation
+#         binary_value = bin(ord(char))[2:]
+#
+#         # Convert binary value to integer and add to the total sum
+#         total_sum += int(binary_value, 2)
+#
+#     # Convert total sum to hexadecimal and return
+#     return hex(total_sum)

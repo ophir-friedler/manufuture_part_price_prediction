@@ -1,4 +1,4 @@
-.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict prepare_mysql
+.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -64,9 +64,9 @@ tidy_data: werk_data process_werk_data mf_data
 notebook: ## requirements
 	jupyter notebook
 
-## Train pricing model on processed data and save it to models
-train_model_old: tidy_data
-	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
+### Train pricing model on processed data and save it to models
+#train_model_old: tidy_data
+#	$(PYTHON_INTERPRETER) src/models/train_model_and_save.py $(PROCESSED_DATA) models
 
 ## Train a model and save it to models
 train_model:
@@ -80,9 +80,13 @@ evaluate_model:
 show_model_details:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option show_model_details --model_name $(MODEL_NAME)
 
-## Load model and predict: make load_model_and_predict MODEL_NAME=model__[100, 50, 20, 10]__T__part_price_training_table_646_training
+## Load model and predict on PART_FEATURES_PRED_INPUT: make load_model_and_predict MODEL_NAME=model__[100, 50, 20, 10]__T__part_price_training_table_646_training
 load_model_and_predict:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_predict --model_name $(MODEL_NAME)
+
+## Load model and show inputs: make load_model_and_show_inputs MODEL_NAME=model__[100, 50, 20, 10]__T__part_price_training_table_646_training
+load_model_and_show_inputs:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_show_inputs --model_name $(MODEL_NAME)
 
 ## Load model and predict on raw werk: make load_model_and_predict_on_raw MODEL_NAME=MA_128_64_32_MIH_0x576d7_TH_0x432_E_10_BS_32_LR_0.01
 load_model_and_predict_on_raw:

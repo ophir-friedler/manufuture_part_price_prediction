@@ -5,7 +5,7 @@ import pandas as pd
 import logging
 
 from src.data.validators import validate_existence
-from src.features.build_features import transform_to_comma_separated_str_set
+from src.features.build_features import transform_to_comma_separated_str_set, get_first_material_category_level_1_set
 from src.utils.util_functions import parse_list_of_integers, bin_feature
 from src.data.config import PRICE_BUCKETS
 from src.models.config import MAX_ENCLOSING_CUBOID_VOLUMNE_NUM_EXPONENTIAL_BUCKETS, \
@@ -225,12 +225,6 @@ def enrich_wp_type_part(all_tables_df):
         all_tables_df['wp_type_part_' + str(netsuite_file_id)] = all_tables_df['wp_type_part'].merge(
             all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)], how='left',
             left_on='post_id', right_on='Item Number_netsuite_' + str(netsuite_file_id))
-
-
-def get_first_material_category_level_1_set(werk_data_for_name_df):
-    if len(werk_data_for_name_df) == 0:
-        return None
-    return werk_data_for_name_df['material_category_level_1_set'].iloc[0]
 
 
 def get_first_material_category_level_2_set(werk_data_for_name_df):

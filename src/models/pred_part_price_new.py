@@ -2,18 +2,16 @@ import logging
 import shutil
 from pathlib import Path
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 from keras import Sequential, optimizers
-from keras.models import load_model
 from keras.src.layers import Dense
 
 from src.config import LABEL_FEATURE
 from src.data import dal
-from src.data.enrichers import get_first_material_category_level_1_set
-from src.features.build_features import transform_to_comma_separated_str_set
-from src.utils import util_functions
+from src.features.build_features import transform_to_comma_separated_str_set, get_first_material_category_level_1_set
+from src.models.part_price_model_serving import ModelServing
 
 
 def model_exists(model_name):
@@ -21,7 +19,7 @@ def model_exists(model_name):
     return (project_dir / 'models' / model_name).exists()
 
 
-class ModelHandler:
+class ModelHandler(ModelServing):
     """
     This class is responsible for handling a model.
     It is responsible for training the model, predicting on the data and saving the model.
@@ -37,6 +35,7 @@ class ModelHandler:
                  last_neuron_activation=None,
                  loss_function=None
                  ):
+        super().__init__()
         self.model = None
         self.model_inputs = None
         self.model_info_df = None
@@ -61,13 +60,14 @@ class ModelHandler:
         # and the list self.list_of_relu_layer_widths
 
         return 'MA_' + '_'.join([str(x) for x in self.list_of_relu_layer_widths]) \
-               + '_MIH_' + str(string_to_hex(str(self.model_inputs))) \
-               + '_TH_' + str(string_to_hex(str(self.target_column_name))) \
+               + '_MIH_' + str(self.string_to_hex(str(self.model_inputs))) \
+               + '_TH_' + str(self.string_to_hex(str(self.target_column_name))) \
                + '_E_' + str(self.epochs) \
                + '_BS_' + str(self.batch_size) \
                + '_LR_' + str(self.learning_rate)
 
     def validate_model_info(self):
+        super().validate_model_info()
         if self.model_name is None:
             raise ValueError('Model name is not set.')
         if self.list_of_relu_layer_widths is None:
@@ -93,7 +93,6 @@ class ModelHandler:
                           training_table_name=None,
                           categorical_features=None,
                           verbose=False):
-
         categorical_features_dict = {categorical_feature: dal.get_distinct_values(table_name=training_table_name,
                                                                                   column_name=categorical_feature).iloc[
                                                           :, 0].tolist()
@@ -111,22 +110,22 @@ class ModelHandler:
             model_handler.build_and_train_model(training_table_name=training_table_name, verbose=verbose)
         return model_handler
 
-    @classmethod
-    def load_model_by_name(cls, model_name):
-        project_dir = Path(__file__).resolve().parents[2]
-        load_path = project_dir / 'models' / model_name
-        model_info_df = pd.read_parquet(load_path / 'model_info.parquet')
-        model_handler = cls(list_of_relu_layer_widths=model_info_df['list_of_relu_layer_widths'][0],
-                            categorical_features_dict=model_info_df['categorical_features_dict'][0],
-                            epochs=model_info_df['epochs'][0],
-                            batch_size=model_info_df['batch_size'][0],
-                            learning_rate=model_info_df['learning_rate'][0],
-                            target_column_name=model_info_df['target_column_name'][0])
-        model_handler.model_inputs = list(model_info_df['model_inputs'][0])
-        model_handler.model_name = model_info_df['model_name'][0]
-        model_handler.model_info_df = model_info_df
-        model_handler.model = load_model(load_path / (model_handler.model_name + '.keras'))
-        return model_handler
+    # @classmethod
+    # def load_model_by_name(cls, model_name):
+    #     project_dir = Path(__file__).resolve().parents[2]
+    #     load_path = project_dir / 'models' / model_name
+    #     model_info_df = pd.read_parquet(load_path / 'model_info.parquet')
+    #     model_handler = cls(list_of_relu_layer_widths=model_info_df['list_of_relu_layer_widths'][0],
+    #                         categorical_features_dict=model_info_df['categorical_features_dict'][0],
+    #                         epochs=model_info_df['epochs'][0],
+    #                         batch_size=model_info_df['batch_size'][0],
+    #                         learning_rate=model_info_df['learning_rate'][0],
+    #                         target_column_name=model_info_df['target_column_name'][0])
+    #     model_handler.model_inputs = list(model_info_df['model_inputs'][0])
+    #     model_handler.model_name = model_info_df['model_name'][0]
+    #     model_handler.model_info_df = model_info_df
+    #     model_handler.model = load_model(load_path / (model_handler.model_name + '.keras'))
+    #     return model_handler
 
     @classmethod
     def delete_model_by_name(cls, model_name):
@@ -257,56 +256,56 @@ class ModelHandler:
         prepared_data = self.prepare_expanded_data(expanded_data=expanded_training_data_df)
         return prepared_data
 
-    def prepare_data_from_part_features_dict(self, part_features_dict):
-        row = util_functions.dict_to_df_row(part_features_dict)
-        expanded_row_df = expand_context_target_data(context_target_data_df=row,
-                                                     categorical_features=list(self.categorical_features_dict.keys()))
-        return self.prepare_expanded_data(expanded_row_df)
+    # def prepare_data_from_part_features_dict(self, part_features_dict):
+    #     row = util_functions.dict_to_df_row(part_features_dict)
+    #     expanded_row_df = expand_context_target_data(context_target_data_df=row,
+    #                                                  categorical_features=list(self.categorical_features_dict.keys()))
+    #     return self.prepare_expanded_data(expanded_row_df)
 
     # Predict price for a single part based on its features
-    def predict_part_price(self, part_features_dict):
-        logging.info("[NEW] Predicting part price for: " + str(part_features_dict))
-        row = util_functions.dict_to_df_row(part_features_dict)
-        print('row is: ' + str(row.to_dict()))
-        prepared_row = self.prepare_data_from_part_features_dict(part_features_dict)
-        print('prepared_row is: ' + str(prepared_row.to_dict()))
-        model_input = prepared_row.drop(columns=[LABEL_FEATURE])
-        return self.model.predict(model_input, verbose=0), model_input
-
+    # def predict_part_price(self, part_features_dict):
+    #     logging.info("[NEW] Predicting part price for: " + str(part_features_dict))
+    #     row = util_functions.dict_to_df_row(part_features_dict)
+    #     print('row is: ' + str(row.to_dict()))
+    #     prepared_row = self.prepare_data_from_part_features_dict(part_features_dict)
+    #     print('prepared_row is: ' + str(prepared_row.to_dict()))
+    #     model_input = prepared_row.drop(columns=[LABEL_FEATURE])
+    #     return self.model.predict(model_input, verbose=0), model_input
+    #
     def predict_on_werk_raw_data(self, werk_raw_dict):
         return self.predict_part_price(convert_werk_raw_to_categorical_features_dict(werk_raw_dict))
+    #
+    # def predict_on_prepared_data(self, prepared_data):
+    #     return self.model.predict(prepared_data.drop(columns=[LABEL_FEATURE]))
+    #
+    # def prepare_expanded_data(self, expanded_data):
+    #     # TODO: instead of fill_value=False, create a 'dont know' feature value for each categorical feature
+    #     only_training_columns_df = expanded_data.reindex(columns=self.model_inputs + [LABEL_FEATURE],
+    #                                                      fill_value=False)
+    #     only_training_columns_df.loc[:, self.model_inputs] = only_training_columns_df.loc[:, self.model_inputs].astype(
+    #         'bool')
+    #     # only_training_columns_df.loc[:, self.model_inputs] = only_training_columns_df.loc[:, self.model_inputs].astype(int)
+    #     return only_training_columns_df
+    #
+    # def show_model_details(self):
+    #     print("\nModel features: \n" + str(list(self.categorical_features_dict.keys())))
+    #     print("\n\nModel info: \n " + str(self.model_info_df.to_dict(orient='records')))
 
-    def predict_on_prepared_data(self, prepared_data):
-        return self.model.predict(prepared_data.drop(columns=[LABEL_FEATURE]))
 
-    def prepare_expanded_data(self, expanded_data):
-        # TODO: instead of fill_value=False, create a 'dont know' feature value for each categorical feature
-        only_training_columns_df = expanded_data.reindex(columns=self.model_inputs + [LABEL_FEATURE],
-                                                         fill_value=False)
-        only_training_columns_df.loc[:, self.model_inputs] = only_training_columns_df.loc[:, self.model_inputs].astype(
-            'bool')
-        # only_training_columns_df.loc[:, self.model_inputs] = only_training_columns_df.loc[:, self.model_inputs].astype(int)
-        return only_training_columns_df
-
-    def show_model_details(self):
-        print("\nModel features: \n" + str(list(self.categorical_features_dict.keys())))
-        print("\n\nModel info: \n " + str(self.model_info_df.to_dict(orient='records')))
-
-
-def string_to_hex(string):
-    # Initialize sum to 0
-    total_sum = 0
-
-    # Iterate over each character in the string
-    for char in string:
-        # Convert the character to its binary representation
-        binary_value = bin(ord(char))[2:]
-
-        # Convert binary value to integer and add to the total sum
-        total_sum += int(binary_value, 2)
-
-    # Convert total sum to hexadecimal and return
-    return hex(total_sum)
+# def string_to_hex(string):
+#     # Initialize sum to 0
+#     total_sum = 0
+#
+#     # Iterate over each character in the string
+#     for char in string:
+#         # Convert the character to its binary representation
+#         binary_value = bin(ord(char))[2:]
+#
+#         # Convert binary value to integer and add to the total sum
+#         total_sum += int(binary_value, 2)
+#
+#     # Convert total sum to hexadecimal and return
+#     return hex(total_sum)
 
 
 def calculate_model_inputs(categorical_features_dict):
