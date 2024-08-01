@@ -6,10 +6,12 @@ import logging
 
 from src.data.validators import validate_existence
 from src.features.build_features import transform_to_comma_separated_str_set, get_first_material_category_level_1_set
-from src.utils.util_functions import parse_list_of_integers, bin_feature
+from src.utils.util_functions import parse_list_of_integers
+from src.models.part_price_model_serving import bin_feature, exponential_bins, \
+    AVERAGE_TOLERANCE_01_BUCKETED_EXPONENTIAL_BUCKETS, AVERAGE_TOLERANCE_001_BUCKETED_EXPONENTIAL_BUCKETS, \
+    AVERAGE_TOLERANCE_0001_BUCKETED_EXPONENTIAL_BUCKETS
 from src.data.config import PRICE_BUCKETS
-from src.models.config import MAX_ENCLOSING_CUBOID_VOLUMNE_NUM_EXPONENTIAL_BUCKETS, \
-    AVERAGE_TOLERANCE_01_BUCKETED_EXPONENTIAL_BUCKETS
+from src.models.config import MAX_ENCLOSING_CUBOID_VOLUMNE_NUM_EXPONENTIAL_BUCKETS
 from src.utils import util_functions
 
 
@@ -293,7 +295,7 @@ def get_average_tolerance_001_bucketed(werk_data_for_name_df):
         return None
     if 'tolerance_001' in werk_data_for_name_df.columns:
         return bin_feature(werk_data_for_name_df['tolerance_001'].mean(),
-                           exponential_bins(10))
+                           exponential_bins(AVERAGE_TOLERANCE_001_BUCKETED_EXPONENTIAL_BUCKETS))
     else:
         return None
 
@@ -303,7 +305,7 @@ def get_average_tolerance_0001_bucketed(werk_data_for_name_df):
         return None
     if 'tolerance_0001' in werk_data_for_name_df.columns:
         return bin_feature(werk_data_for_name_df['tolerance_0001'].mean(),
-                           exponential_bins(10))
+                           exponential_bins(AVERAGE_TOLERANCE_0001_BUCKETED_EXPONENTIAL_BUCKETS))
     else:
         return None
 
@@ -344,6 +346,8 @@ def calculate_werk_data_for_part(row, werk_by_name_df):
                           get_first_material_category_level_2_set(werk_data_for_name_df),
                       'first_material_category_level_3_set':
                           get_first_material_category_level_3_set(werk_data_for_name_df),
+                      # The averages are only because parts may appear multiple times so we assume the average
+                      # will "do nothing", the numbers will be the same
                       'average_number_of_nominal_sizes_bucketed':
                           get_average_number_of_nominal_sizes_bucketed(werk_data_for_name_df),
                       'average_number_of_nominal_sizes': get_average_number_of_nominal_sizes(werk_data_for_name_df),
@@ -411,10 +415,6 @@ def get_max_enclosing_cuboid_volume(werk_data_for_name_df):
         return ret_val.max()
     except ValueError:
         logging.error(werk_data_for_name_df['enclosing_cuboid_volumes_set'])
-
-
-def exponential_bins(exp_range):
-    return [0] + [2 ** i for i in range(0, exp_range)]
 
 
 def is_enclosing_cuboid_volumes_list_same(name, werk_data_for_name_df):

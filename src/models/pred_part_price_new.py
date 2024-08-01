@@ -8,10 +8,9 @@ import seaborn as sns
 from keras import Sequential, optimizers
 from keras.src.layers import Dense
 
-from src.config import LABEL_FEATURE
 from src.data import dal
 from src.features.build_features import transform_to_comma_separated_str_set, get_first_material_category_level_1_set
-from src.models.part_price_model_serving import ModelServing
+from src.models.part_price_model_serving import ModelServing, LABEL_FEATURE
 
 
 def model_exists(model_name):

@@ -1,4 +1,4 @@
-.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql read_parquet
+.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql read_parquet load_model_and_predict_json
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -91,6 +91,10 @@ load_model_and_show_inputs:
 ## Load model and predict on raw werk: make load_model_and_predict_on_raw MODEL_NAME=MA_128_64_32_MIH_0x576d7_TH_0x432_E_10_BS_32_LR_0.01
 load_model_and_predict_on_raw:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_predict_on_raw --model_name $(MODEL_NAME)
+
+## Load model and predict on json: make load_model_and_predict_json MODEL_NAME=MA_128_64_32_MIH_0x6d79_TH_0x432_E_150_BS_30_LR_0.001
+load_model_and_predict_json:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option load_model_and_predict_json --model_name $(MODEL_NAME)
 
 drop_all_models:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option drop_all_models

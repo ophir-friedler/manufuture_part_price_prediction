@@ -9,6 +9,8 @@ from werk24 import W24Measure
 from werk24.models.title_block import W24TitleBlock
 
 from src.features.build_features import transform_to_comma_separated_str_set
+from src.models.part_price_model_serving import calculate_tolerance, is_in_tolerance_01, is_in_tolerance_001, \
+    is_in_tolerance_0001
 
 
 def werk_to_parquets(input_filepath, output_filepath):
@@ -21,6 +23,7 @@ def werk_to_parquets(input_filepath, output_filepath):
         write_df_to_parquet(werk_by_result_name(werk_df), 'werk_by_name', output_filepath)
 
 
+# Part features definition
 def werk_by_result_name(werk_df) -> pd.DataFrame:
     logging.info("Building werk_enrich: name, num_pages, material_category_level_1,2,3")
     werk_by_name_df = werk_df.groupby('name').agg(
@@ -36,10 +39,10 @@ def werk_by_result_name(werk_df) -> pd.DataFrame:
         average_tolerance=('tolerance', lambda x: sum([y for y in list(x) if y is not None]) / len(
             [y for y in list(x) if y is not None])),
         # The number of tolerances that are greater than 0.1
-        tolerance_01=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.1 <= y])),
+        tolerance_01=('tolerance', lambda x: len([y for y in list(x) if is_in_tolerance_01(y)])),
         # The number of tolerances that are between 0.01 and 0.1
-        tolerance_001=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.01 <= y < 0.1])),
-        tolerance_0001=('tolerance', lambda x: len([y for y in list(x) if y is not None and y < 0.01])),
+        tolerance_001=('tolerance', lambda x: len([y for y in list(x) if is_in_tolerance_001(y)])),
+        tolerance_0001=('tolerance', lambda x: len([y for y in list(x) if is_in_tolerance_0001(y)])),
         enclosing_cuboid_volumes_set=('enclosing_cuboid_volume', lambda x: transform_to_comma_separated_str_set(x))
     )
     werk_by_name_df = werk_by_name_df.reset_index()
@@ -133,10 +136,10 @@ def add_sectional_measures(canvas_external_dimensions_column_name_to_value, list
                 dict_werk_column_name_to_value['size_tolerance_deviation_upper'] = None
         if dict_werk_column_name_to_value['size_tolerance_deviation_lower'] is not None \
                 and dict_werk_column_name_to_value['size_tolerance_deviation_upper'] is not None:
-            dict_werk_column_name_to_value['tolerance'] = dict_werk_column_name_to_value[
-                                                              'size_tolerance_deviation_upper'] - \
-                                                          dict_werk_column_name_to_value[
-                                                              'size_tolerance_deviation_lower']
+            dict_werk_column_name_to_value['tolerance'] = calculate_tolerance(dict_werk_column_name_to_value[
+                                                                                  'size_tolerance_deviation_upper'],
+                                                                              dict_werk_column_name_to_value[
+                                                                                  'size_tolerance_deviation_lower'])
         list_of_dict_werk_column_name_to_value.append(dict_werk_column_name_to_value)
 
 

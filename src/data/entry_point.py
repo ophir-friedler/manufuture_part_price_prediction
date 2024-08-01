@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from src.data.dal import prices_in_csvs_to_parquets, manufuture_db_to_parquets, 
 from src.data.make_werk_data import werk_to_parquets, process_all_werk_results_dirs_to_df, werk_by_result_name
 from src.data.tidy_data import prepare_tidy_data, split_part_price_train_test_tables
 from src.models.config import LIST_OF_RELU_LAYER_WIDTHS, PART_FEATURES_TO_TRAIN_ON, PART_FEATURES_PRED_INPUT, \
-    WERK_RAW_DICT, EPOCHS, BATCH_SIZE, LEARNING_RATE
+    WERK_RAW_DICT, EPOCHS, BATCH_SIZE, LEARNING_RATE, PART_DETAILS_JSON
 from src.models.part_price_model_serving import ModelServing
 from src.models.pred_part_price_new import ModelHandler, drop_all_models
 
@@ -75,6 +76,14 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
         logging.info(f'loaded model: {model_serving.model_name}')
         prediction, model_input = model_serving.predict_part_price(part_features_dict=PART_FEATURES_PRED_INPUT)
         logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
+    if option == 'load_model_and_predict_json':
+        model_serving = ModelServing.load_model_by_name(model_name)
+        logging.info(f'loaded model: {model_serving.model_name}')
+        # PART_DETAILS_JSON is a json dict. Translate it to string for the function call
+        item_data_json = json.dumps(PART_DETAILS_JSON)
+        prediction, model_input = model_serving.predict_on_item_measures(item_data_json=item_data_json)
+        logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
+
     if option == 'load_model_and_show_inputs':
         model_serving = ModelServing.load_model_by_name(model_name)
         logging.info(f'loaded model: {model_serving.model_name}')

@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 
 import pandas as pd
@@ -124,20 +123,6 @@ def add_date_time_columns(row, columns_prefix, datetime_column):
         row[columns_prefix + '_year_month'] = (str(row[columns_prefix + '_year']) + "-" + str(row[columns_prefix + '_month']))
         row[columns_prefix + '_Ym'] = pd.to_datetime(row[columns_prefix + '_year_month'], format='%Y-%m').strftime('%Y-%m')
     return row
-
-
-def bin_feature(feature_value, bins_arr):
-    bins_arr.sort()
-    if feature_value < bins_arr[0]:
-        return "<" + str(bins_arr[0])
-    for idx, bin_upper_bound in enumerate(bins_arr):
-        if feature_value < bin_upper_bound:
-            return "[" + str(bins_arr[idx - 1]) + "-" + str(bins_arr[idx]) + ")"
-    if feature_value >= bins_arr[-1]:
-        return ">=" + str(bins_arr[-1])
-    logging.warning("Error: could not bin feature value: " + str(feature_value) + " with bins: " + str(bins_arr))
-    # Throw an exception if we got here - we should never get here
-    raise Exception("Error: could not bin feature value: " + str(feature_value) + " with bins: " + str(bins_arr))
 
 
 def convert_str_set_to_float_set(str_set):

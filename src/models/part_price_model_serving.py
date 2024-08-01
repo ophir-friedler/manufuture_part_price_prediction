@@ -5,8 +5,10 @@ from pathlib import Path
 import pandas as pd
 from keras.models import load_model
 
-# LABEL_FEATURE = 'part_price_label'
-from src.config import LABEL_FEATURE
+AVERAGE_TOLERANCE_01_BUCKETED_EXPONENTIAL_BUCKETS = 10
+AVERAGE_TOLERANCE_001_BUCKETED_EXPONENTIAL_BUCKETS = 10
+AVERAGE_TOLERANCE_0001_BUCKETED_EXPONENTIAL_BUCKETS = 10
+LABEL_FEATURE = 'part_price_label'
 
 
 class ModelServing:
@@ -77,6 +79,35 @@ class ModelServing:
                                                      categorical_features=list(self.categorical_features_dict.keys()))
         return self.prepare_expanded_data(expanded_row_df)
 
+    def predict_on_item_measures(self, item_data_json):
+        item_data_dict = json.loads(item_data_json)
+        measures_list = item_data_dict['measures']
+        return self.predict_part_price(self.translate_from_measures_to_features(measures_list))
+
+    def translate_from_measures_to_features(self, measures_list):
+        part_features_dict = {}
+        tolerance_01 = 0
+        tolerance_001 = 0
+        tolerance_0001 = 0
+        for measure in measures_list:
+            upper_tolerance = measure['upper_tolerance']
+            lower_tolerance = measure['lower_tolerance']
+            tolerance = calculate_tolerance(upper_tolerance, lower_tolerance)
+            tolerance_01 += 1 if is_in_tolerance_01(tolerance) else 0
+            tolerance_001 += 1 if is_in_tolerance_001(tolerance) else 0
+            tolerance_0001 += 1 if is_in_tolerance_0001(tolerance) else 0
+
+        for key, value in self.categorical_features_dict.items():
+            if key == 'average_tolerance_01_bucketed':
+                part_features_dict[key] = bin_feature(tolerance_01, exponential_bins(AVERAGE_TOLERANCE_01_BUCKETED_EXPONENTIAL_BUCKETS))
+            elif key == 'average_tolerance_001_bucketed':
+                part_features_dict[key] = bin_feature(tolerance_001, exponential_bins(AVERAGE_TOLERANCE_001_BUCKETED_EXPONENTIAL_BUCKETS))
+            elif key == 'average_tolerance_0001_bucketed':
+                part_features_dict[key] = bin_feature(tolerance_0001, exponential_bins(AVERAGE_TOLERANCE_0001_BUCKETED_EXPONENTIAL_BUCKETS))
+        return part_features_dict
+
+
+
     # Predict price for a single part based on its features
     def predict_part_price(self, part_features_dict):
         logging.info("[NEW] Predicting part price for: " + str(part_features_dict))
@@ -130,3 +161,37 @@ def expand_context_target_data(context_target_data_df, categorical_features):
         df_expanded.columns = [f"{cat_feature}_{col}" for col in df_expanded.columns]
         context_target_data_df = pd.concat([context_target_data_df, df_expanded], axis=1)
     return context_target_data_df
+
+
+def calculate_tolerance(tolerance_upper_deviation, tolerance_lower_deviation):
+    return tolerance_upper_deviation - tolerance_lower_deviation
+
+
+def is_in_tolerance_01(val):
+    return val is not None and val >= 0.1
+
+
+def is_in_tolerance_001(val):
+    return val is not None and 0.01 <= val < 0.1
+
+
+def is_in_tolerance_0001(val):
+    return val is not None and val < 0.01
+
+
+def bin_feature(feature_value, bins_arr):
+    bins_arr.sort()
+    if feature_value < bins_arr[0]:
+        return "<" + str(bins_arr[0])
+    for idx, bin_upper_bound in enumerate(bins_arr):
+        if feature_value < bin_upper_bound:
+            return "[" + str(bins_arr[idx - 1]) + "-" + str(bins_arr[idx]) + ")"
+    if feature_value >= bins_arr[-1]:
+        return ">=" + str(bins_arr[-1])
+    logging.warning("Error: could not bin feature value: " + str(feature_value) + " with bins: " + str(bins_arr))
+    # Throw an exception if we got here - we should never get here
+    raise Exception("Error: could not bin feature value: " + str(feature_value) + " with bins: " + str(bins_arr))
+
+
+def exponential_bins(exp_range):
+    return [0] + [2 ** i for i in range(0, exp_range)]
