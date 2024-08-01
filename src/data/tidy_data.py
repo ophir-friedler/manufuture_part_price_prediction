@@ -24,10 +24,10 @@ def prepare_all_tidy_tables(all_tables_df):
     clean_wp_parts(all_tables_df)
     build_wp_tables_by_post_type(all_tables_df)
     build_user_to_entity_rel(all_tables_df)
-    build_netsuite_by_memo(all_tables_df)
-    build_netsuite_by_memo_496(all_tables_df)
+    # build_netsuite_by_memo(all_tables_df)
+    # build_netsuite_by_memo_496(all_tables_df)
     # build_netsuite_by_item_number(all_tables_df, '496')
-    build_netsuite_by_item_number(all_tables_df, '646')
+    # build_netsuite_by_item_number(all_tables_df, '646')
     enrichers.enrich_all(all_tables_df)
     build_training_data_tables(all_tables_df)
     # Aggregated statistics
@@ -45,10 +45,9 @@ def build_training_data_tables(all_tables_df):
     ac_agency_manufacturer(all_tables_df)
     build_proj_manu_training_table(all_tables_df, MIN_NUM_BIDS_PER_MANUFACTURER)
     build_part_price_training_table(all_tables_df)
-    build_part_price_training_table_496(all_tables_df)
+    # build_part_price_training_table_496(all_tables_df)
     # build_part_price_training_table_by_id(all_tables_df, '496')
-    build_part_price_training_table_by_id(all_tables_df, '646')
-    build_part_price_train_test_tables()
+    # build_part_price_training_table_by_id(all_tables_df, '646')
 
 
 def build_part_price_training_table(all_tables_df):
@@ -403,7 +402,7 @@ def clean_wp_manufacturers(all_tables_df):
         'cnc_turning_notes'].fillna('').astype('str')
 
 
-def build_part_price_train_test_tables():
+def split_part_price_train_test_tables():
     training_table_df = dal.read_table_into_dataframe('part_price_training_table')
     train_df, test_df = train_test_split(training_table_df, test_size=0.2, random_state=42)
     dal.dataframe_to_table(table_name='part_price_training_table_80',

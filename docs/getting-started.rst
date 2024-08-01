@@ -95,8 +95,8 @@ Process data
 
      make tidy_data
 
-This will read the data from manufuture database, and write it to parquents.
-It will also read the werk data and write it to parquents.
+This will read the data from manufuture database, and write it to parquets.
+It will also read the werk data and write it to parquets.
 Finally, it will write all necessary data to the rnd database for the model to use.
 
 

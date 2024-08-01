@@ -199,10 +199,10 @@ def enrich_wp_type_bid(all_tables_df):
 # Add werk data to wp_type_part
 def enrich_wp_type_part(all_tables_df):
     logging.info("Enriching wp_type_quote with: price_bucket, quantity_bucket, werk data ")
-    validate_existence(all_tables_df, ['wp_type_part', 'werk_by_name', 'netsuite_by_memo', 'netsuite_by_memo_496'])
+    validate_existence(all_tables_df, ['wp_type_part', 'werk_by_name']) # , 'netsuite_by_memo', 'netsuite_by_memo_496'
 
-    all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo'], how='left',
-                                                                        left_on='name', right_on='Memo_netsuite')
+    # all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo'], how='left',
+    #                                                                     left_on='name', right_on='Memo_netsuite')
 
     all_tables_df['wp_type_part']['price_bucket'] = all_tables_df['wp_type_part']['unit_price'].apply(bucket_prices)
     all_tables_df['wp_type_part']['quantity_bucket'] = all_tables_df['wp_type_part'].apply(
@@ -216,15 +216,15 @@ def enrich_wp_type_part(all_tables_df):
     # print all keys of all_tables_df
     print(list(all_tables_df.keys()))
 
-    all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo_496'],
-                                                                        how='left',
-                                                                        left_on='name', right_on='Memo_netsuite_496')
+    # all_tables_df['wp_type_part'] = all_tables_df['wp_type_part'].merge(all_tables_df['netsuite_by_memo_496'],
+    #                                                                     how='left',
+    #                                                                     left_on='name', right_on='Memo_netsuite_496')
 
-    for netsuite_file_id in [646]:
-        print(list(all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)].keys()))
-        all_tables_df['wp_type_part_' + str(netsuite_file_id)] = all_tables_df['wp_type_part'].merge(
-            all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)], how='left',
-            left_on='post_id', right_on='Item Number_netsuite_' + str(netsuite_file_id))
+    # for netsuite_file_id in []: # 646
+    #     print(list(all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)].keys()))
+    #     all_tables_df['wp_type_part_' + str(netsuite_file_id)] = all_tables_df['wp_type_part'].merge(
+    #         all_tables_df['netsuite_by_item_number_' + str(netsuite_file_id)], how='left',
+    #         left_on='post_id', right_on='Item Number_netsuite_' + str(netsuite_file_id))
 
 
 def get_first_material_category_level_2_set(werk_data_for_name_df):
@@ -354,6 +354,7 @@ def calculate_werk_data_for_part(row, werk_by_name_df):
                       'average_tolerance_01_bucketed': get_average_tolerance_01_bucketed(werk_data_for_name_df),
                       'average_tolerance_001_bucketed': get_average_tolerance_001_bucketed(werk_data_for_name_df),
                       'average_tolerance_0001_bucketed': get_average_tolerance_0001_bucketed(werk_data_for_name_df),
+                      # 'tolerance_01_bucketed': bin_feature(werk_data_for_name_df['tolerance_01'].mean(), exponential_bins(10)),
                       'max_enclosing_cuboid_volume': get_max_enclosing_cuboid_volume(werk_data_for_name_df),
                       'log_max_enclosing_cuboid_volume': get_log_max_enclosing_cuboid_volume(werk_data_for_name_df),
                       'cube_root_max_enclosing_cuboid_volume': get_cube_root_max_enclosing_cuboid_volume(

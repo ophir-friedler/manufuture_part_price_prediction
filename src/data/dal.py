@@ -65,6 +65,10 @@ def read_table_into_dataframe(table_name, database_name=DB_NAME) -> pd.DataFrame
     return pd.DataFrame()
 
 
+def read_parquet_into_dataframe(parquet_path: str) -> pd.DataFrame:
+    return pd.read_parquet(parquet_path)
+
+
 def get_distinct_values(table_name, column_name):
     db_connection_string, sql_engine = _get_sql_engine()
     try:

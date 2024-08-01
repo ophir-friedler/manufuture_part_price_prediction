@@ -1,4 +1,4 @@
-.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql
+.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql read_parquet
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -94,6 +94,11 @@ load_model_and_predict_on_raw:
 
 drop_all_models:
 	$(PYTHON_INTERPRETER) src/data/entry_point.py --option drop_all_models
+
+## read_parquet: make read_parquet PARQUET_PATH=data/raw/mf_data/wp_type_part.parquet
+make read_parquet:
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option read_parquet --parquet_path $(PARQUET_PATH)
+
 
 ## Delete all compiled Python files, and all parquet files
 clean: drop_all_models

@@ -35,7 +35,9 @@ def werk_by_result_name(werk_df) -> pd.DataFrame:
         number_of_nominal_sizes=('nominal_size', lambda x: len([y for y in list(x) if y is not None])),
         average_tolerance=('tolerance', lambda x: sum([y for y in list(x) if y is not None]) / len(
             [y for y in list(x) if y is not None])),
+        # The number of tolerances that are greater than 0.1
         tolerance_01=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.1 <= y])),
+        # The number of tolerances that are between 0.01 and 0.1
         tolerance_001=('tolerance', lambda x: len([y for y in list(x) if y is not None and 0.01 <= y < 0.1])),
         tolerance_0001=('tolerance', lambda x: len([y for y in list(x) if y is not None and y < 0.01])),
         enclosing_cuboid_volumes_set=('enclosing_cuboid_volume', lambda x: transform_to_comma_separated_str_set(x))

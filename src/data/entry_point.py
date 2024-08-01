@@ -9,7 +9,7 @@ from src.data import dal
 from src.data.dal import prices_in_csvs_to_parquets, manufuture_db_to_parquets, save_all_tables_to_parquets, \
     save_all_tables_to_database
 from src.data.make_werk_data import werk_to_parquets, process_all_werk_results_dirs_to_df, werk_by_result_name
-from src.data.tidy_data import prepare_tidy_data
+from src.data.tidy_data import prepare_tidy_data, split_part_price_train_test_tables
 from src.models.config import LIST_OF_RELU_LAYER_WIDTHS, PART_FEATURES_TO_TRAIN_ON, PART_FEATURES_PRED_INPUT, \
     WERK_RAW_DICT, EPOCHS, BATCH_SIZE, LEARNING_RATE
 from src.models.part_price_model_serving import ModelServing
@@ -25,8 +25,9 @@ from src.models.pred_part_price_new import ModelHandler, drop_all_models
 @click.option('--output_filepath', nargs=1, default=None)
 @click.option('--model_output_filepath', nargs=1, default=None)
 @click.option('--model_name', nargs=1, default=None)
+@click.option('--parquet_path', nargs=1, default=None)
 def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_filepath=None, output_filepath=None,
-         model_output_filepath=None, model_name=None):
+         model_output_filepath=None, model_name=None, parquet_path=None):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """
@@ -52,6 +53,7 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
         logging.info("Done processing all tables")
         save_all_tables_to_parquets(all_tables_df, output_filepath)
         save_all_tables_to_database(all_tables_df)
+        split_part_price_train_test_tables()
     if option == 'train_model_and_save':
         model_handler = ModelHandler.get_trained_model(list_of_relu_layer_widths=LIST_OF_RELU_LAYER_WIDTHS,
                                                        epochs=EPOCHS,
@@ -82,6 +84,8 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
         logging.info(f'loaded model: {model_handler.model_name}')
         prediction, model_input = model_handler.predict_on_werk_raw_data(werk_raw_dict=WERK_RAW_DICT)
         logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
+    if option == 'read_parquet':
+        print(dal.read_parquet_into_dataframe(parquet_path))
 
     # TODO: Create the equivalent of evaluate here
     if option == 'evaluate_model':
