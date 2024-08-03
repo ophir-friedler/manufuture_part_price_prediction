@@ -32,21 +32,24 @@ class ModelHandler(ModelServing):
                  learning_rate=None,
                  target_column_name=None,
                  last_neuron_activation=None,
-                 loss_function=None
+                 loss_function=None,
+                 model_inputs=None,
+                 model_name=None,
                  ):
-        super().__init__()
+        super().__init__(list_of_relu_layer_widths, categorical_features_dict, epochs, batch_size, learning_rate,
+                         target_column_name, last_neuron_activation, loss_function, model_inputs, model_name)
         self.model = None
-        self.model_inputs = None
+        # self.model_inputs = None
         self.model_info_df = None
 
-        self.list_of_relu_layer_widths = list_of_relu_layer_widths
-        self.categorical_features_dict = categorical_features_dict
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.learning_rate = learning_rate
-        self.target_column_name = target_column_name
-        self.last_neuron_activation = last_neuron_activation
-        self.loss_function = loss_function
+        # self.list_of_relu_layer_widths = list_of_relu_layer_widths
+        # self.categorical_features_dict = categorical_features_dict
+        # self.epochs = epochs
+        # self.batch_size = batch_size
+        # self.learning_rate = learning_rate
+        # self.target_column_name = target_column_name
+        # self.last_neuron_activation = last_neuron_activation
+        # self.loss_function = loss_function
         logging.info(f"Using following target column name: {self.target_column_name}")
         self.model_inputs = calculate_model_inputs(self.categorical_features_dict)
         self.model_name = self.get_model_name()

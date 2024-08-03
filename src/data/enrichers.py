@@ -338,6 +338,7 @@ def calculate_werk_data_for_part(row, werk_by_name_df):
 
     return pd.Series({'num_werk_results': len(werk_data_for_name_df),
                       'found_werk': 1 if len(werk_data_for_name_df) > 0 else 0,
+                      'werk_names_list': extract_werk_name_list(werk_data_for_name_df),
                       'is_material_category_levels_same': is_material_category_levels_same(part_name,
                                                                                            werk_data_for_name_df),
                       'first_material_category_level_1_set':
@@ -369,6 +370,12 @@ def calculate_werk_data_for_part(row, werk_by_name_df):
                           werk_data_for_name_df),
                       'average_num_pages_per_result': get_average_num_pages_per_result(werk_data_for_name_df)}
                      )
+
+
+def extract_werk_name_list(werk_data_for_name_df):
+    if len(werk_data_for_name_df) == 0:
+        return None
+    return transform_to_comma_separated_str_set(werk_data_for_name_df['name'])
 
 
 def get_max_enclosing_cuboid_volume_bucketed(werk_data_for_name_df):

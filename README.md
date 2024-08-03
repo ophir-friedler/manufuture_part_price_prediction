@@ -7,7 +7,7 @@ Project Organization
 ------------
 
     ├── LICENSE
-    ├── Makefile           <- clean, notebook, tidy_data, mf_data, werk_data, lint, requirements, train_model
+    ├── Makefile           <- clean, notebook, data_pipeline, mf_data, werk_data, lint, requirements, train_model
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
     │   ├── external       <- Data from third party sources, including Manufuture prices from csv
@@ -39,7 +39,7 @@ Project Organization
     │   │   └── make_werk_data.py
     │   │   └── fetch_mf_data.py
     │   │   └── fetch_mf_prices.py
-    │   │   └── tidy_data.py
+    │   │   └── entry_point.py
     │   │
     │   ├── features       <- Scripts to turn raw data into features for modeling
     │   │   └── build_features.py

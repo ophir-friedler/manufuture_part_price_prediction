@@ -93,7 +93,7 @@ Process data
 
 .. code:: bash
 
-     make tidy_data
+     make data_pipeline
 
 This will read the data from manufuture database, and write it to parquets.
 It will also read the werk data and write it to parquets.

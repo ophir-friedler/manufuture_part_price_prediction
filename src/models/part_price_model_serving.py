@@ -19,20 +19,21 @@ class ModelServing:
     It is capable of loading a model by name, printing some details, and serving a prediction on various input types.
     """
 
-    def __init__(self):
+    def __init__(self, list_of_relu_layer_widths, categorical_features_dict, epochs, batch_size, learning_rate,
+                 target_column_name, last_neuron_activation, loss_function, model_inputs, model_name):
         self.model = None
-        self.model_inputs = None
         self.model_info_df = None
-        self.list_of_relu_layer_widths = None
-        self.categorical_features_dict = None
-        self.epochs = None
-        self.batch_size = None
-        self.learning_rate = None
-        self.target_column_name = None
-        self.last_neuron_activation = None
-        self.loss_function = None
-        self.model_inputs = None
-        self.model_name = None
+
+        self.list_of_relu_layer_widths = list_of_relu_layer_widths
+        self.categorical_features_dict = categorical_features_dict
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.target_column_name = target_column_name
+        self.last_neuron_activation = last_neuron_activation
+        self.loss_function = loss_function
+        self.model_inputs = model_inputs
+        self.model_name = model_name
         logging.info('Model serving. Empty')
 
     def pretty_categorical_features_dict(self):
@@ -59,19 +60,30 @@ class ModelServing:
 
     @classmethod
     def load_model_by_name(cls, model_name):
+        logging.info(f"Loading model {model_name} from ModelServing.")
         models_dir = cls.get_models_dir_path_str()
         load_path = models_dir + '/' + model_name
         model_info_df = pd.read_parquet(load_path + '/model_info.parquet')
-        model_serving = cls()
-        model_serving.list_of_relu_layer_widths = model_info_df['list_of_relu_layer_widths'][0]
-        model_serving.categorical_features_dict = model_info_df['categorical_features_dict'][0]
-        model_serving.epochs = model_info_df['epochs'][0]
-        model_serving.batch_size = model_info_df['batch_size'][0]
-        model_serving.learning_rate = model_info_df['learning_rate'][0]
-        model_serving.target_column_name = model_info_df['target_column_name'][0]
+        model_serving = cls(list_of_relu_layer_widths=model_info_df['list_of_relu_layer_widths'][0],
+                            categorical_features_dict=model_info_df['categorical_features_dict'][0],
+                            epochs=model_info_df['epochs'][0],
+                            batch_size=model_info_df['batch_size'][0],
+                            learning_rate=model_info_df['learning_rate'][0],
+                            target_column_name=model_info_df['target_column_name'][0],
+                            last_neuron_activation=model_info_df['last_neuron_activation'][0],
+                            loss_function=model_info_df['loss_function'][0],
+                            model_inputs=model_info_df['model_inputs'][0],
+                            model_name=model_info_df['model_name'][0]
+                            )
+        # model_serving.list_of_relu_layer_widths = model_info_df['list_of_relu_layer_widths'][0]
+        # model_serving.categorical_features_dict = model_info_df['categorical_features_dict'][0]
+        # model_serving.epochs = model_info_df['epochs'][0]
+        # model_serving.batch_size = model_info_df['batch_size'][0]
+        # model_serving.learning_rate = model_info_df['learning_rate'][0]
+        # model_serving.target_column_name = model_info_df['target_column_name'][0]
         # model_serving.model_inputs = calculate_model_inputs(model_serving.categorical_features_dict)
-        model_serving.model_inputs = list(model_info_df['model_inputs'][0])
-        model_serving.model_name = model_info_df['model_name'][0]
+        # model_serving.model_inputs = list(model_info_df['model_inputs'][0])
+        # model_serving.model_name = model_info_df['model_name'][0]
         model_serving.model_info_df = model_info_df
         model_serving.model = load_model(load_path + '/' + model_serving.model_name + '.keras')
         return model_serving

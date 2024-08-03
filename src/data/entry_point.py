@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-import json
 import logging
 from pathlib import Path
 
 import click
 from dotenv import find_dotenv, load_dotenv
 
+from src.config import DB_NAME
 from src.data import dal
 from src.data.dal import prices_in_csvs_to_parquets, manufuture_db_to_parquets, save_all_tables_to_parquets, \
     save_all_tables_to_database
+from src.data.data_pipeline import prepare_data_pipeline, split_part_price_train_test_tables
 from src.data.make_werk_data import werk_to_parquets, process_all_werk_results_dirs_to_df, werk_by_result_name
-from src.data.tidy_data import prepare_tidy_data, split_part_price_train_test_tables
 from src.models.config import LIST_OF_RELU_LAYER_WIDTHS, PART_FEATURES_TO_TRAIN_ON, PART_FEATURES_PRED_INPUT, \
     WERK_RAW_DICT, EPOCHS, BATCH_SIZE, LEARNING_RATE, PART_DETAILS_JSON
 from src.models.part_price_model_serving import ModelServing
@@ -49,8 +49,8 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
         dal.dataframe_to_table(table_name='werk_by_name', table_df=werk_by_result_name(werk_df))
     if option == 'prepare_mysql':
         dal.prepare_mysql()
-    if option == 'prepare_tidy_data':
-        all_tables_df = prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath)
+    if option == 'prepare_data_pipeline':
+        all_tables_df = prepare_data_pipeline(mf_data_filepath, mf_prices_filepath, werk_input_filepath)
         logging.info("Done processing all tables")
         save_all_tables_to_parquets(all_tables_df, output_filepath)
         save_all_tables_to_database(all_tables_df)
@@ -103,6 +103,8 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
     if option == 'show_model_details':
         model_handler = ModelHandler.load_model_by_name(model_name)
         model_handler.show_model_details()
+    if option == 'clean':
+        dal.drop_database(DB_NAME)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-.PHONY: clean activate_env notebook tidy_data mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql read_parquet load_model_and_predict_json
+.PHONY: clean activate_env notebook data_pipeline mf_data werk_data lint requirements train_model_old train_model load_model_and_predict load_model_and_show_inputs prepare_mysql read_parquet load_model_and_predict_json
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -56,8 +56,8 @@ prepare_mysql: ## requirements
 
 
 ## Prepare tidy data (handle Manufuture and Werk data if needed)
-tidy_data: werk_data process_werk_data mf_data
-	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prepare_tidy_data --mf_data_filepath $(RAW_MF_DATA) --mf_prices_filepath $(RAW_MF_PRICES) --werk_input_filepath $(INTERIM_WERK_DATA) --output_filepath $(PROCESSED_DATA)
+data_pipeline: werk_data process_werk_data mf_data
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option prepare_data_pipeline --mf_data_filepath $(RAW_MF_DATA) --mf_prices_filepath $(RAW_MF_PRICES) --werk_input_filepath $(INTERIM_WERK_DATA) --output_filepath $(PROCESSED_DATA)
 
 
 ## Run jupyter notebook server
@@ -113,6 +113,7 @@ clean: drop_all_models
 	find data/raw -type f -name "*.parquet" -delete
 	find data/raw/mf_data -type f -name "*.parquet" -delete
 	find data/raw/mf_prices -type f -name "*.parquet" -delete
+	$(PYTHON_INTERPRETER) src/data/entry_point.py --option clean
 
 
 

@@ -10,7 +10,7 @@ from src.data.config import MANUFACTURER_BID_LABEL_COLUMN_NAME, MIN_NUM_BIDS_PER
 from src.utils.util_functions import get_all_dataframes_from_parquets
 
 
-def prepare_tidy_data(mf_data_filepath, mf_prices_filepath, werk_input_filepath):
+def prepare_data_pipeline(mf_data_filepath, mf_prices_filepath, werk_input_filepath):
     all_tables_df = get_all_dataframes_from_parquets(mf_data_filepath)
     all_tables_df.update(get_all_dataframes_from_parquets(mf_prices_filepath))
     all_tables_df.update(get_all_dataframes_from_parquets(werk_input_filepath))
@@ -53,8 +53,9 @@ def build_training_data_tables(all_tables_df):
 def build_part_price_training_table(all_tables_df):
     logging.info("Building part_price_training_table")
     # parts_with_netsuite_prices = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['Rate mean_netsuite'].notnull()]
-    df = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['found_werk'] == 1]  # with werk prices
+    df = all_tables_df['wp_type_part'][all_tables_df['wp_type_part']['found_werk'] == 1]  # with werk data
     df = df[df['max_enclosing_cuboid_volume'] > 0]  # Filter out parts with volume <= 0
+    df = df[df['unit_price'] > 0]  # Filter out parts with no price
     all_tables_df['part_price_training_table'] = df
 
 
