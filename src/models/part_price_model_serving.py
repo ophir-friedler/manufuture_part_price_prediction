@@ -79,9 +79,9 @@ class ModelServing:
                                                      categorical_features=list(self.categorical_features_dict.keys()))
         return self.prepare_expanded_data(expanded_row_df)
 
-    def predict_on_item_measures(self, item_data_json):
-        item_data_dict = json.loads(item_data_json)
-        measures_list = item_data_dict['measures']
+    def predict_on_part_measures(self, part_measures_json):
+        # item_data_dict = json.loads(part_measures_json)
+        measures_list = part_measures_json['measures']
         return self.predict_part_price(self.translate_from_measures_to_features(measures_list))
 
     def translate_from_measures_to_features(self, measures_list):
@@ -105,8 +105,6 @@ class ModelServing:
             elif key == 'average_tolerance_0001_bucketed':
                 part_features_dict[key] = bin_feature(tolerance_0001, exponential_bins(AVERAGE_TOLERANCE_0001_BUCKETED_EXPONENTIAL_BUCKETS))
         return part_features_dict
-
-
 
     # Predict price for a single part based on its features
     def predict_part_price(self, part_features_dict):

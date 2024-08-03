@@ -75,17 +75,18 @@ PART_DETAILS_JSON = {
             "measure_name": "measure_four",
             "upper_tolerance": 2,
             "lower_tolerance": -2
-        },
-        {
-            "measure_name": "measure_five",
-            "upper_tolerance": 2,
-            "lower_tolerance": -2
-        },
-        {
-            "measure_name": "measure_six",
-            "upper_tolerance": 2,
-            "lower_tolerance": -2
         }
+        # ,
+        # {
+        #     "measure_name": "measure_five",
+        #     "upper_tolerance": 2,
+        #     "lower_tolerance": -2
+        # },
+        # {
+        #     "measure_name": "measure_six",
+        #     "upper_tolerance": 2,
+        #     "lower_tolerance": -2
+        # }
     ]
 }
 
