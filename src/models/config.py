@@ -1,8 +1,8 @@
 PART_FEATURES_TO_TRAIN_ON = [
     # 'max_enclosing_cuboid_volume_bucketed',
     'average_tolerance_01_bucketed',
-    # 'average_tolerance_001_bucketed',
-    # 'average_tolerance_0001_bucketed',
+    'average_tolerance_001_bucketed',
+    'average_tolerance_0001_bucketed',
     # 'average_number_of_nominal_sizes_bucketed',
     # 'first_material_category_level_1_set',
     # 'first_material_category_level_2_set',

@@ -74,15 +74,15 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
     if option == 'load_model_and_predict':
         model_serving = ModelServing.load_model_by_name(model_name)
         logging.info(f'loaded model: {model_serving.model_name}')
-        prediction, model_input = model_serving.predict_part_price(part_features_dict=PART_FEATURES_PRED_INPUT)
+        prediction, model_input, model_features = model_serving.predict_part_price(part_features_dict=PART_FEATURES_PRED_INPUT)
         logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
     if option == 'load_model_and_predict_json':
         model_serving = ModelServing.load_model_by_name(model_name)
         logging.info(f'loaded model: {model_serving.model_name}')
         # PART_DETAILS_JSON is a json dict. Translate it to string for the function call
-        item_data_json = json.dumps(PART_DETAILS_JSON)
-        prediction, model_input = model_serving.predict_on_part_measures(part_data=item_data_json)
-        logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
+        item_data_json = PART_DETAILS_JSON
+        prediction, positive_columns, model_features = model_serving.predict_on_part_measures(part_data=item_data_json)
+        logging.info(f'Features: {model_features}, \nModel prediction: {prediction} \nInput (positives): {positive_columns}')
 
     if option == 'load_model_and_show_inputs':
         model_serving = ModelServing.load_model_by_name(model_name)
@@ -91,8 +91,8 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
     if option == 'load_model_and_predict_on_raw':
         model_handler = ModelHandler.load_model_by_name(model_name)
         logging.info(f'loaded model: {model_handler.model_name}')
-        prediction, model_input = model_handler.predict_on_werk_raw_data(werk_raw_dict=WERK_RAW_DICT)
-        logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
+        prediction, positive_columns = model_handler.predict_on_werk_raw_data(werk_raw_dict=WERK_RAW_DICT)
+        logging.info(f'Finished model prediction: {prediction} on example: {positive_columns}')
     if option == 'read_parquet':
         print(dal.read_parquet_into_dataframe(parquet_path))
 

@@ -83,7 +83,8 @@ class ModelServing:
         return self.prepare_expanded_data(expanded_row_df)
 
     def predict_on_part_measures(self, part_data):
-        # item_data_dict = json.loads(part_data)
+        logging.info(type(part_data))
+        logging.info(f"part data: {part_data}")
         measures_list = part_data['measures']
         return self.predict_part_price(self.translate_from_measures_to_features(measures_list))
 
@@ -120,7 +121,8 @@ class ModelServing:
         prediction_df = self.model.predict(model_input, verbose=0)
         # unpack the prediction from the dataframe
         prediction = prediction_df[0][0]
-        return prediction, model_input, prepared_row
+        positive_columns = [col for col in model_input.columns if model_input[col].values[0] == 1]
+        return prediction, positive_columns, list(self.categorical_features_dict.keys())
 
     def predict_on_prepared_data(self, prepared_data):
         return self.model.predict(prepared_data.drop(columns=[LABEL_FEATURE]))

@@ -211,7 +211,7 @@ class ModelHandler(ModelServing):
                               verbose=False):
         self.validate_model_info()
         self.compile_model()
-        logging.info(f'Starting to train a model with num columns: {len(self.model_inputs)}')
+        logging.info(f'Starting to train a model on {training_table_name} with num columns: {len(self.model_inputs)}')
         self.train_model(training_table_name, verbose)
 
     def train_model(self, training_table_name, verbose=False):
