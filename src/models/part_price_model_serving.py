@@ -10,6 +10,8 @@ AVERAGE_TOLERANCE_001_BUCKETED_EXPONENTIAL_BUCKETS = 10
 AVERAGE_TOLERANCE_0001_BUCKETED_EXPONENTIAL_BUCKETS = 10
 LABEL_FEATURE = 'part_price_label'
 
+LOCAL_OR_REMOTE = 'local'
+
 
 class ModelServing:
     """
@@ -46,12 +48,13 @@ class ModelServing:
     # Change this according to the environment
     @staticmethod
     def get_models_dir_path_str():
-        project_dir = Path(__file__).resolve().parents[2]
-        ret_val = str(project_dir / 'models')
-        # ret_val = None
-        # with open('./mfmatch_api/manu_python/config.json', 'r') as file:
-        #     _config = json.load(file)
-        #     ret_val = _config['STATIC_DATA_DIR_PATH']
+        if LOCAL_OR_REMOTE == 'local':
+            project_dir = Path(__file__).resolve().parents[2]
+            ret_val = str(project_dir / 'models')
+        else:
+            with open('./mfmatch_api/manu_python/config.json', 'r') as file:
+                _config = json.load(file)
+                ret_val = _config['STATIC_DATA_DIR_PATH']
         return ret_val
 
     @classmethod
@@ -79,9 +82,9 @@ class ModelServing:
                                                      categorical_features=list(self.categorical_features_dict.keys()))
         return self.prepare_expanded_data(expanded_row_df)
 
-    def predict_on_part_measures(self, part_measures_json):
-        # item_data_dict = json.loads(part_measures_json)
-        measures_list = part_measures_json['measures']
+    def predict_on_part_measures(self, part_data):
+        # item_data_dict = json.loads(part_data)
+        measures_list = part_data['measures']
         return self.predict_part_price(self.translate_from_measures_to_features(measures_list))
 
     def translate_from_measures_to_features(self, measures_list):
@@ -114,7 +117,10 @@ class ModelServing:
         prepared_row = self.prepare_data_from_part_features_dict(part_features_dict)
         print('prepared_row is: ' + str(prepared_row.to_dict()))
         model_input = prepared_row.drop(columns=[LABEL_FEATURE])
-        return self.model.predict(model_input, verbose=0), model_input
+        prediction_df = self.model.predict(model_input, verbose=0)
+        # unpack the prediction from the dataframe
+        prediction = prediction_df[0][0]
+        return prediction, model_input, prepared_row
 
     def predict_on_prepared_data(self, prepared_data):
         return self.model.predict(prepared_data.drop(columns=[LABEL_FEATURE]))

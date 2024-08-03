@@ -81,7 +81,7 @@ def main(option, io, mf_data_filepath=None, mf_prices_filepath=None, werk_input_
         logging.info(f'loaded model: {model_serving.model_name}')
         # PART_DETAILS_JSON is a json dict. Translate it to string for the function call
         item_data_json = json.dumps(PART_DETAILS_JSON)
-        prediction, model_input = model_serving.predict_on_part_measures(part_measures_json=item_data_json)
+        prediction, model_input = model_serving.predict_on_part_measures(part_data=item_data_json)
         logging.info(f'Finished model prediction: {prediction} on example: {model_input}')
 
     if option == 'load_model_and_show_inputs':
